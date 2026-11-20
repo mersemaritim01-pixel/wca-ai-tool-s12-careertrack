@@ -139,7 +139,7 @@ python main.py
 
 Note: Simulated Claude responses are used during development until real API integration is configured.
 
-Team Responsibilities
+5.Team Responsibilities
 
 Member 1: Core application and job tracking.
 
@@ -160,6 +160,60 @@ Programme: WECAN Season 12
 Language: Python
 
 AI Provider: Anthropic Claude
+6. Running the Application
+
+Start CareerTrack AI using:
+
+python main.py
+
+7. Application Menu
+
+The application provides the following options:
+
+Add Job Application
+
+View All Applications
+
+Update Application
+
+Delete Application
+
+Search Applications
+
+View Application Summary
+
+Ask CareerTrack AI
+
+Exit
+
+8. Testing
+
+Run the individual tests using:
+
+python test_memory.py
+python test_job_tracker.py
+python test_summary.py
+python -m unittest test_ai_assistant.py
+
+9. Current Development Status
+
+The project currently uses simulated Claude responses during development. Integration with the actual Claude API will be completed when API credentials are available.
+
+10. Contributors
+
+Developed collaboratively by a team of three members as a Python project.
+
+11. Future Improvements
+
+Connect the actual Claude API.
+
+Develop a graphical user interface.
+
+Add user authentication.
+
+Introduce application reminders and notifications.
+
+Generate downloadable application reports.
 
 CareerTrack AI – Making Job Application Management Smarter.
 

@@ -16,5 +16,14 @@
         "application_date": "2026-11-20",
         "status": "Interview",
         "notes": "Application submitted successfully."
+    },
+    {
+        "id": "6322de72-bf60-486d-886a-625bd62ee456",
+        "company": "ncba bank",
+        "job_title": "customer service officer",
+        "location": "nairobi",
+        "application_date": "2026-11-20",
+        "status": "Applied",
+        "notes": "when is the interview"
     }
 ]
