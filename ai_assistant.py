@@ -1,7 +1,7 @@
 
-
 import json
 from prompts import SYSTEM_PROMPT, build_user_prompt
+from memory import ConversationMemory
 
 
 def simulate_claude_response(question):
@@ -51,10 +51,8 @@ def validate_response(response):
 
 def ask_claude(question, applications=None, history=None):
     """
-    Sends a question to the simulated Claude AI
+    Sends a question to simulated Claude AI
     and validates the response.
-
-    Retries once if the response is invalid.
     """
 
     user_prompt = build_user_prompt(
@@ -65,10 +63,8 @@ def ask_claude(question, applications=None, history=None):
 
     for attempt in range(2):
 
-        # Simulated Claude response
         response = simulate_claude_response(question)
 
-        # Validate the response
         result = validate_response(response)
 
         if result is not None:
@@ -82,11 +78,56 @@ def ask_claude(question, applications=None, history=None):
     }
 
 
+def ask_with_memory(question, memory, applications=None):
+    """
+    Connects AI responses with conversation memory.
+    """
+
+    # Retrieve previous conversation
+    history = memory.get_history()
+
+    # Store the current question
+    memory.add_message("user", question)
+
+    # Generate AI response using previous history
+    result = ask_claude(
+        question,
+        applications,
+        history
+    )
+
+    # Store AI response
+    memory.add_message("assistant", result["reply"])
+
+    # Save conversation
+    memory.save()
+
+    return result
+
+
 if __name__ == "__main__":
 
-    question = "How can I improve my job application?"
+    memory = ConversationMemory(
+        session_id="careertrack_default"
+    )
 
-    result = ask_claude(question)
+    # Load previous conversations
+    memory.load()
 
-    print("\nCareerTrack AI Response:")
-    print(json.dumps(result, indent=4))
+    print("Welcome to CareerTrack AI!")
+    print("Type 'exit' to stop.\n")
+
+    while True:
+
+        question = input("You: ")
+
+        if question.lower() == "exit":
+            print("Conversation saved. Goodbye!")
+            break
+
+        result = ask_with_memory(question, memory)
+
+        print("\nCareerTrack AI:")
+        print(result["reply"])
+        print()
+
