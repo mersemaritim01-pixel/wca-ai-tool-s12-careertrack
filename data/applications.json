@@ -25,5 +25,32 @@
         "application_date": "2026-11-20",
         "status": "Applied",
         "notes": "when is the interview"
+    },
+    {
+        "id": "04dda926-ef57-4274-aad5-f647005e922d",
+        "company": "equity bank",
+        "job_title": "business banker",
+        "location": "ruiru",
+        "application_date": "2026-11-21",
+        "status": "Applied",
+        "notes": "need an IRA liense"
+    },
+    {
+        "id": "c54e8c71-4201-4fb7-9b56-71015ea06079",
+        "company": "sharon cherono",
+        "job_title": "kcb bank",
+        "location": "nairobi",
+        "application_date": "2026-11-21",
+        "status": "Applied",
+        "notes": "ready to start working"
+    },
+    {
+        "id": "d572273c-17ed-4495-9d86-c74a32b42138",
+        "company": "co-operative bank",
+        "job_title": "loan officer",
+        "location": "nairobi",
+        "application_date": "2026-11-22",
+        "status": "Applied",
+        "notes": "share interview dates"
     }
 ]

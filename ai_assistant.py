@@ -12,6 +12,13 @@ from prompts import (
 )
 
 from memory import ConversationMemory
+from anthropic import Anthropic
+from dotenv import load_dotenv
+# Load environment variables
+load_dotenv()
+
+# Connect to Claude API
+client = Anthropic()
 
 
 # ==========================================
@@ -155,6 +162,7 @@ def validate_response(response):
 # 4. ASK CLAUDE
 # ==========================================
 
+
 def ask_claude(question, applications=None, history=None):
 
     user_prompt = build_user_prompt(
@@ -165,12 +173,33 @@ def ask_claude(question, applications=None, history=None):
 
     for attempt in range(2):
 
-        response = simulate_claude_response(
-            question,
-            history
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ]
         )
 
-        result = validate_response(response)
+        response_text = "\n".join(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
+
+        # Remove possible Markdown code fences
+        response_text = re.sub(
+            r"^```(?:json)?\s*|\s*```$",
+            "",
+            response_text.strip(),
+            flags=re.IGNORECASE
+        )
+
+        result = validate_response(response_text)
 
         if result is not None:
             return result
@@ -181,7 +210,6 @@ def ask_claude(question, applications=None, history=None):
         "reply": "Unable to generate a valid response.",
         "suggested_action": None
     }
-
 
 # ==========================================
 # 5. CONNECT AI WITH MEMORY
@@ -370,9 +398,33 @@ def generate_session_summary(history):
 
     for attempt in range(2):
 
-        response = simulate_claude_summary(history)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=SUMMARY_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": summary_prompt
+                }
+            ]
+        )
 
-        result = validate_summary(response)
+        response_text = "\n".join(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
+
+        # Remove possible Markdown code fences
+        response_text = re.sub(
+            r"^```(?:json)?\s*|\s*```$",
+            "",
+            response_text.strip(),
+            flags=re.IGNORECASE
+        )
+
+        result = validate_summary(response_text)
 
         if result is not None:
             return result
@@ -380,8 +432,6 @@ def generate_session_summary(history):
         print(f"Invalid summary. Retry {attempt + 1}...")
 
     return None
-
-
 # ==========================================
 # 9. SAVE COMPLETE SESSION
 # ==========================================

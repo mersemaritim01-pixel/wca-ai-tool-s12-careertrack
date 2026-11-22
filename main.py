@@ -1,4 +1,3 @@
-
 from job_tracker import JobTracker
 from summary import display_summary
 from memory import ConversationMemory
@@ -152,23 +151,30 @@ def search_applications(tracker):
         )
 
 
+
 def ask_ai(memory, tracker):
     print("\n--- CAREERTRACK AI ASSISTANT ---")
 
-    question = input("Ask your question: ")
+    question = input("Ask your question: ").strip()
 
-    if not question.strip():
+    if not question:
         print("Please enter a question.")
         return
 
-    result = ask_with_memory(
-        question,
-        memory,
-        tracker.view_applications()
-    )
+    try:
+        result = ask_with_memory(
+            question,
+            memory,
+            tracker.view_applications()
+        )
 
-    print("\nCareerTrack AI:")
-    print(result["reply"])
+        print("\nCareerTrack AI:")
+        print(result["reply"])
+
+    except Exception as error:
+        print("\nUnable to connect to the AI assistant.")
+        print("Error:", error)
+        print("Please check your API configuration and try again.")
 
 def display_session_menu():
     print("\n====================================")

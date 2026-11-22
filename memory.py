@@ -89,7 +89,6 @@ class ConversationMemory:
                 raise ValueError("Invalid message in conversation history.")
 
         self.history = messages[-(self.max_turns * 2):]
-
         return True
 
     def clear_history(self):
