@@ -131,7 +131,7 @@ git clone https://github.com/mersemaritim01-pixel/wca-ai-tool-s12-careertrack.gi
 ### Step 2: Navigate to the Project Directory
 
 ```bash
-cd YOUR-REPOSITORY
+cd wca-ai-tool-s12-careertrack
 ```
 
 ### Step 3: Install Dependencies
