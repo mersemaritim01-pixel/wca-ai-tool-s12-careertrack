@@ -1,219 +1,185 @@
 # wca-ai-tool-s12-careertrack
-An AI-powered Job Application Tracker built with Python and the Claude API to organize applications, track interview dates, and manage follow-ups with session memory.
 
-CareerTrack AI – Smart Job Application Tracker
+**CareerTrack AI – Smart Job Application Tracker**
 
-Track Applications. Remember Opportunities. Build Careers.
+*Track Applications. Remember Opportunities. Build Careers.*
 
-1. Project Overview
+An AI-powered Job Application Tracker built with Python and Anthropic Claude API to help job seekers organize applications, track interviews, manage follow-ups, and receive intelligent career assistance through conversation memory.
 
-CareerTrack AI is a Python-based AI-powered job application tracking system designed to help job seekers organize, manage, and monitor their job applications.
+## 1. Project Overview
 
-The system allows users to record job applications, track application progress, manage interview schedules, and receive AI-powered assistance.
+CareerTrack AI is a Python-based AI-powered job application management system designed to help job seekers organize, manage, and monitor their job applications.
 
-It integrates Claude AI by Anthropic to provide intelligent responses, maintain conversation memory, answer questions about saved applications, and generate session summaries.
+It integrates Anthropic Claude AI to provide intelligent career assistance, answer questions about saved applications, maintain conversation memory, and generate session summaries.
 
-2. Problem Statement
+## 2. Problem Statement
 
-Job seekers often struggle to manage multiple job applications, remember application deadlines, track interview dates, and follow up with potential employers.
+Job seekers often struggle to manage multiple job applications, remember deadlines, track interview dates, and follow up with potential employers.
 
-CareerTrack AI aims to solve these challenges by providing a centralized platform for managing job applications and offering intelligent AI assistance.
+CareerTrack AI addresses these challenges through a centralized application tracking system supported by AI-powered career assistance.
 
-3. Project Objectives
+## 3. Project Objectives
 
-To simplify job application management.
+- Simplify job application management.
+- Monitor application progress.
+- Manage interview dates and follow-ups.
+- Provide AI-powered career assistance.
+- Maintain conversation history and memory.
+- Generate AI session summaries.
 
-To help users monitor the progress of their applications.
+## 4. Key Features
 
-To manage interview dates and follow-up reminders.
+**Job Application Management**
+- Add, view, update, and delete applications.
+- Search saved applications.
+- Track application progress.
 
-To provide AI-powered career assistance.
+**Application Status Tracking**
+- Applied
+- Shortlisted
+- Interview
+- Rejected
+- Offered
 
-To maintain conversation history and memory.
+**Interview and Follow-up Management**
+- Record interview dates.
+- Manage follow-up information.
+- Monitor recruitment progress.
 
-To generate summaries of AI interaction sessions.
+**AI-Powered Assistant**
+- Claude AI integration.
+- Personalized career guidance.
+- Assistance with saved job applications.
+- Context-aware conversations.
 
-4. Key Features
+**Session Management**
+- Create new AI sessions.
+- Retrieve previous sessions.
+- Maintain conversation history.
+- Generate session summaries.
 
-Job Application Management
+## 5. Technologies Used
 
-Add new job applications.
+- Python
+- Anthropic Claude API
+- JSON
+- python-dotenv
+- Git and GitHub
 
-View all saved applications.
+## 6. Project Structure
 
-Update application information.
-
-Delete applications.
-
-Track application status.
-
-Application Status Tracking
-
-The system supports the following statuses:
-
-Applied
-
-Shortlisted
-
-Interview
-
-Rejected
-
-Offered
-
-Interview and Follow-up Management
-
-Record interview dates.
-
-Store follow-up information.
-
-Monitor application progress.
-
-AI-Powered Assistant
-
-Interact with Claude AI.
-
-Ask questions about saved job applications.
-
-Receive intelligent career-related assistance.
-
-Maintain conversation memory across multiple interactions.
-
-Session Management
-
-Start new AI sessions.
-
-Open previous sessions.
-
-View conversation history.
-
-Generate AI session summaries.
-
-Technologies Used
-
-Python
-
-Claude AI (Anthropic)
-
-JSON
-
-Git and GitHub
-
-python-dotenv
-
-Project Structure
-
-CareerTrack-AI/
+```text
+wca-ai-tool-s12-careertrack/
+│
 ├── main.py
 ├── ai_assistant.py
 ├── memory.py
 ├── job_tracker.py
 ├── summary.py
 ├── prompts.py
+│
 ├── data/
 ├── sessions/
+│
+├── test_memory.py
+├── test_job_tracker.py
+├── test_summary.py
+├── test_ai_assistant.py
+│
 ├── .env
 ├── .gitignore
 ├── requirements.txt
 └── README.md
+```
 
-Installation
+## 7. Installation and Setup
 
-Clone the repository:
+**Clone the repository**
 
+```bash
 git clone https://github.com/mersemaritim01-pixel/wca-ai-tool-s12-careertrack.git
+```
 
-Navigate to the project folder:
+**Navigate to the project folder**
 
+```bash
 cd wca-ai-tool-s12-careertrack
+```
 
-Install dependencies:
+**Install dependencies**
 
+```bash
 pip install -r requirements.txt
+```
 
-Configure your .env file with your Anthropic API key when available.
+**Configure environment variables**
 
-Run the application:
+Create a `.env` file in the project directory and add your Anthropic API key:
 
-python main.py
+```env
+ANTHROPIC_API_KEY=your_api_key_here
+```
 
-Note: Simulated Claude responses are used during development until real API integration is configured.
+Keep your API key private. Never upload your `.env` file to GitHub.
 
-5.Team Responsibilities
-
-Member 1: Core application and job tracking.
-
-Member 2: Claude AI integration and conversation memory.
-
-Member 3: Session management, testing, and documentation.
-
-Expected Outcome
-
-To provide an efficient, intelligent, and centralized platform for managing job applications and improving the job search experience.
-
-Project Information
-
-Project: CareerTrack AI
-
-Programme: WECAN Season 12
-
-Language: Python
-
-AI Provider: Anthropic Claude
-6. Running the Application
+## 8. Running the Application
 
 Start CareerTrack AI using:
 
+```bash
 python main.py
+```
 
-7. Application Menu
+## 9. Application Menu
 
 The application provides the following options:
 
-Add Job Application
+1. Add Job Application
+2. View All Applications
+3. Update Application
+4. Delete Application
+5. Search Applications
+6. View Application Summary
+7. Ask CareerTrack AI
+8. Exit
 
-View All Applications
+## 10. Testing
 
-Update Application
+Run individual tests using:
 
-Delete Application
-
-Search Applications
-
-View Application Summary
-
-Ask CareerTrack AI
-
-Exit
-
-8. Testing
-
-Run the individual tests using:
-
+```bash
 python test_memory.py
 python test_job_tracker.py
 python test_summary.py
 python -m unittest test_ai_assistant.py
+```
 
-9. Current Development Status
+## 11. Current Development Status
 
-The project currently uses simulated Claude responses during development. Integration with the actual Claude API will be completed when API credentials are available.
+CareerTrack AI has implemented job application management, AI integration with Anthropic Claude, conversation memory, session management, and AI-powered session summaries.
 
-10. Contributors
+Further development will focus on expanding its functionality and transitioning towards a web-based platform.
 
-Developed collaboratively by a team of three members as a Python project.
+## 12. Contributors
 
-11. Future Improvements
+Developed collaboratively by:
 
-Connect the actual Claude API.
+1. Mercy Chepkurui
+2. David David Muhuha Maina
+3. Florence Njeri Mucuthi
 
-Develop a graphical user interface.
+**Programme:** WECAN Season 12
 
-Add user authentication.
+## 13. Future Improvements
 
-Introduce application reminders and notifications.
+- AI-powered CV builder.
+- AI-generated cover letters.
+- Web-based application interface.
+- M-Pesa payment integration.
+- Job search integration.
+- Application reminders and notifications.
+- Downloadable application reports.
 
-Generate downloadable application reports.
+---
 
-CareerTrack AI – Making Job Application Management Smarter.
-
+**CareerTrack AI – Making Job Application Management Smarter.**
