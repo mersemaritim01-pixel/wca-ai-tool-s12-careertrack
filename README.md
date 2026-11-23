@@ -303,3 +303,4 @@ Developed collaboratively for **WECAN Season 12**.
 **CareerTrack AI – Making Job Application Management Smarter.**
 
 *Track Applications. Remember Opportunities. Build Careers.*
+ 
