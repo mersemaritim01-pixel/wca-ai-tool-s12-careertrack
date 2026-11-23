@@ -284,7 +284,7 @@ Developed collaboratively for **WECAN Season 12**.
 
 1. Mercy Chepkurui
 2. David David Muhuha Maina
-3. Florence Njeri Mucuthi
+3. Florence Muthoni Wanjiru
 
 ## 14. Project Information
 
