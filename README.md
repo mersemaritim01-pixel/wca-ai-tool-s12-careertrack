@@ -141,12 +141,10 @@ Note: Simulated Claude responses are used during development until real API inte
 
 5.Team Responsibilities
 
-Member 1: Core application and job tracking.
+Member 1: Claude API integration,prompts,JSON validation and error handling, AI assistant,py, Prompts.py
 
-Member 2: Claude AI integration and conversation memory.
-
-Member 3: Session management, testing, and documentation.
-
+Member 2: Convertion Memory, saving sessions and job application records memory.py, job tracker.py
+Member 3: Main menu, conversation summeries, testing and documentation main.py, summary.py, README.md
 Expected Outcome
 
 To provide an efficient, intelligent, and centralized platform for managing job applications and improving the job search experience.
