@@ -1,0 +1,56 @@
+[
+    {
+        "id": "2f3d5cc2-80f3-4483-bed6-c66206e90142",
+        "company": "NCBA Bank",
+        "job_title": "Customer Service Officer",
+        "location": "Nairobi",
+        "application_date": "2026-11-20",
+        "status": "Interview",
+        "notes": "Application submitted successfully."
+    },
+    {
+        "id": "fc112dd5-6bb2-4ab1-99a4-cc7b3a5b9402",
+        "company": "NCBA Bank",
+        "job_title": "Customer Service Officer",
+        "location": "Nairobi",
+        "application_date": "2026-11-20",
+        "status": "Interview",
+        "notes": "Application submitted successfully."
+    },
+    {
+        "id": "6322de72-bf60-486d-886a-625bd62ee456",
+        "company": "ncba bank",
+        "job_title": "customer service officer",
+        "location": "nairobi",
+        "application_date": "2026-11-20",
+        "status": "Applied",
+        "notes": "when is the interview"
+    },
+    {
+        "id": "04dda926-ef57-4274-aad5-f647005e922d",
+        "company": "equity bank",
+        "job_title": "business banker",
+        "location": "ruiru",
+        "application_date": "2026-11-21",
+        "status": "Applied",
+        "notes": "need an IRA liense"
+    },
+    {
+        "id": "c54e8c71-4201-4fb7-9b56-71015ea06079",
+        "company": "sharon cherono",
+        "job_title": "kcb bank",
+        "location": "nairobi",
+        "application_date": "2026-11-21",
+        "status": "Applied",
+        "notes": "ready to start working"
+    },
+    {
+        "id": "d572273c-17ed-4495-9d86-c74a32b42138",
+        "company": "co-operative bank",
+        "job_title": "loan officer",
+        "location": "nairobi",
+        "application_date": "2026-11-22",
+        "status": "Applied",
+        "notes": "share interview dates"
+    }
+]

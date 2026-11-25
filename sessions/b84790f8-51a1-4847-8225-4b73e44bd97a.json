@@ -1,0 +1,26 @@
+{
+    "session_id": "b84790f8-51a1-4847-8225-4b73e44bd97a",
+    "saved_at": "2026-11-20T19:10:17.679616+00:00",
+    "conversation_history": [
+        {
+            "role": "user",
+            "content": "How can I improve my CV?",
+            "timestamp": "2026-11-20T19:10:17.679277+00:00"
+        },
+        {
+            "role": "assistant",
+            "content": "Use measurable achievements.",
+            "timestamp": "2026-11-20T19:10:17.679305+00:00"
+        },
+        {
+            "role": "user",
+            "content": "How do I prepare for interviews?",
+            "timestamp": "2026-11-20T19:10:17.679334+00:00"
+        },
+        {
+            "role": "assistant",
+            "content": "Practice common interview questions.",
+            "timestamp": "2026-11-20T19:10:17.679360+00:00"
+        }
+    ]
+}

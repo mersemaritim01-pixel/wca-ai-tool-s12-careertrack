@@ -1,0 +1,46 @@
+{
+    "session_id": "careertrack_default",
+    "saved_at": "2026-11-20T19:31:53.777513+00:00",
+    "conversation_history": [
+        {
+            "role": "user",
+            "content": "How can I improve my CV?",
+            "timestamp": "2026-11-20T19:31:28.163367+00:00"
+        },
+        {
+            "role": "assistant",
+            "content": "This is a simulated CareerTrack AI response. You asked: How can I improve my CV?. I can help you manage and improve your job applications.",
+            "timestamp": "2026-11-20T19:31:28.163721+00:00"
+        },
+        {
+            "role": "user",
+            "content": "How do I prepare for an interview?",
+            "timestamp": "2026-11-20T19:31:38.185022+00:00"
+        },
+        {
+            "role": "assistant",
+            "content": "This is a simulated CareerTrack AI response. You asked: How do I prepare for an interview?. I can help you manage and improve your job applications.",
+            "timestamp": "2026-11-20T19:31:38.185379+00:00"
+        },
+        {
+            "role": "user",
+            "content": "How can I track my applications?",
+            "timestamp": "2026-11-20T19:31:46.522337+00:00"
+        },
+        {
+            "role": "assistant",
+            "content": "This is a simulated CareerTrack AI response. You asked: How can I track my applications?. I can help you manage and improve your job applications.",
+            "timestamp": "2026-11-20T19:31:46.522684+00:00"
+        },
+        {
+            "role": "user",
+            "content": "How do I write a good cover letter?",
+            "timestamp": "2026-11-20T19:31:53.777028+00:00"
+        },
+        {
+            "role": "assistant",
+            "content": "This is a simulated CareerTrack AI response. You asked: How do I write a good cover letter?. I can help you manage and improve your job applications.",
+            "timestamp": "2026-11-20T19:31:53.777449+00:00"
+        }
+    ]
+}

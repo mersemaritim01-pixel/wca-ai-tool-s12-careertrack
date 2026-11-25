@@ -426,3 +426,27 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+.venv/
+
+# Environment variables and API keys
+.env
+
+# Test and coverage files
+.pytest_cache/
+.coverage
+
+# IDE settings
+.vscode/
+
+# Generated application data
+data/
+sessions/
