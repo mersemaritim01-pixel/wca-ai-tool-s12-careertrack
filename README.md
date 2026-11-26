@@ -151,7 +151,7 @@ Our API key is stored in .env
 
 ```bash
 python main.py
-winpty .venv/scripts/python.exe main.py
+winpty python main.py
 ```
 
 ## 7. AI Integration

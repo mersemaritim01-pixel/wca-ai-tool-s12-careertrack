@@ -53,6 +53,7 @@ next action when appropriate, otherwise use null.
 # 2. SUMMARY PROMPT
 # ==========================================
 
+
 SUMMARY_PROMPT = """
 ROLE:
 You are CareerTrack AI, responsible for summarizing
@@ -62,31 +63,30 @@ TASK:
 Analyze the entire conversation and generate a clear
 summary of the user's discussion.
 
-CONTEXT:
-You will receive the complete conversation history,
-including questions asked and responses provided.
-
 CONSTRAINTS:
 1. Include the main topics discussed.
-2. Identify important career advice provided.
-3. Mention job applications discussed.
-4. Highlight suggested actions and follow-ups.
-5. Do not invent information.
-6. Keep the summary clear and concise.
-7. If information is unavailable, state that it
-   was not provided.
+2. Identify companies mentioned by the user.
+3. Identify job positions discussed.
+4. Include important career advice provided.
+5. Highlight suggested actions and follow-ups.
+6. Do not invent information.
+7. Only include companies and positions supported
+   by the conversation.
+8. Use empty lists when information is unavailable.
+9. Keep the summary clear and concise.
 
 OUTPUT:
-Return valid JSON using this structure:
+Return ONLY valid JSON using exactly this structure:
 
 {
     "summary": "Overall conversation summary",
+    "companies_discussed": [],
+    "positions_discussed": [],
     "topics_discussed": [],
     "key_advice": [],
     "suggested_next_steps": []
 }
 """
-
 
 # ==========================================
 # 3. BUILD USER PROMPT
