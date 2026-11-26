@@ -25,24 +25,34 @@ def display_menu():
     print("====================================")
 
 
+
 def add_application(tracker):
     print("\n--- ADD JOB APPLICATION ---")
 
     company = input("Company name: ")
     job_title = input("Job title: ")
     location = input("Location: ")
+    salary = input("Salary (e.g. KES 50,000): ")
+    interview_date = input("Interview date (YYYY-MM-DD, or leave blank): ")
+    follow_up_date = input("Follow-up date (YYYY-MM-DD, or leave blank): ")
     notes = input("Additional notes: ")
 
     try:
         application = tracker.add_application(
-            company, job_title, location, notes
+            company=company,
+            job_title=job_title,
+            location=location,
+            salary=salary,
+            interview_date=interview_date,
+            follow_up_date=follow_up_date,
+            notes=notes
         )
+
         print("\nApplication added successfully!")
         print("Application ID:", application["id"])
 
     except ValueError as error:
         print("Error:", error)
-
 
 def view_applications(tracker):
     print("\n--- ALL JOB APPLICATIONS ---")
@@ -57,6 +67,9 @@ def view_applications(tracker):
         print("\nCompany:", app["company"])
         print("Job Title:", app["job_title"])
         print("Location:", app["location"])
+        print("Salary:", app.get("salary", "Not provided"))
+        print("Interview Date:", app.get("interview_date", "Not set"))
+        print("Follow-up Date:", app.get("follow_up_date", "Not set"))
         print("Status:", app["status"])
         print("Application Date:", app["application_date"])
         print("Application ID:", app["id"])
@@ -76,8 +89,12 @@ def update_application(tracker):
     print("1. Update company")
     print("2. Update job title")
     print("3. Update location")
-    print("4. Update status")
-    print("5. Update notes")
+    print("4. Update salary")
+    print("5. Update application date")
+    print("6. Update interview date")
+    print("7. Update follow-up date")
+    print("8. Update status")
+    print("9. Update notes")
 
     choice = input("Choose what to update: ")
 
@@ -85,9 +102,13 @@ def update_application(tracker):
         "1": "company",
         "2": "job_title",
         "3": "location",
-        "4": "status",
-        "5": "notes"
-    }
+        "4": "salary",
+        "5": "application_date",
+        "6": "interview_date",
+        "7": "follow_up_date",
+        "8": "status",
+        "9": "notes"
+}
 
     if choice not in fields:
         print("Invalid choice.")
@@ -137,7 +158,9 @@ def delete_application(tracker):
 def search_applications(tracker):
     print("\n--- SEARCH APPLICATIONS ---")
 
-    keyword = input("Enter company name or job title: ")
+    keyword = input(
+        "Enter company name, job title or location: "
+    )
 
     results = tracker.search_applications(keyword)
 
@@ -145,12 +168,17 @@ def search_applications(tracker):
         print("No matching applications found.")
         return
 
-    for app in results:
-        print(
-            f"{app['company']} - {app['job_title']} "
-            f"| Status: {app['status']}"
-        )
+    print("\n--- SEARCH RESULTS ---")
 
+    for app in results:
+        print("\nCompany:", app["company"])
+        print("Job Title:", app["job_title"])
+        print("Location:", app["location"])
+        print("Salary:", app.get("salary", "Not provided"))
+        print("Status:", app["status"])
+        print("Interview Date:", app.get("interview_date", "Not set"))
+        print("Follow-up Date:", app.get("follow_up_date", "Not set"))
+        print("Application ID:", app["id"])
 
 def ask_ai(memory, tracker):
     print("\n--- CAREERTRACK AI ASSISTANT ---")
