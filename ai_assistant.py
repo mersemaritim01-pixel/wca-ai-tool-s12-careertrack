@@ -1,4 +1,3 @@
-
 import json
 import re
 import os
@@ -16,6 +15,7 @@ from memory import ConversationMemory
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
+
 # ==========================================
 # 1. LOAD ENVIRONMENT VARIABLES
 # ==========================================
@@ -26,15 +26,7 @@ API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 client = Anthropic(api_key=API_KEY) if API_KEY else None
 
-# Claude model
 CLAUDE_MODEL = "claude-sonnet-4-6"
-from anthropic import Anthropic
-from dotenv import load_dotenv
-# Load environment variables
-load_dotenv()
-
-# Connect to Claude API
-client = Anthropic()
 
 
 # ==========================================
@@ -48,7 +40,7 @@ def identify_company(question, history=None):
     messages = [
         message["content"]
         for message in history
-        if message["role"] == "user"
+        if message.get("role") == "user"
     ]
 
     messages.append(question)
@@ -81,7 +73,7 @@ def identify_company(question, history=None):
 
 
 # ==========================================
-# 3. SIMULATE CLAUDE RESPONSE
+# 3. EXTRACT JSON RESPONSE
 # ==========================================
 
 def extract_json(response_text):
@@ -91,7 +83,6 @@ def extract_json(response_text):
 
     response_text = response_text.strip()
 
-    # Remove Markdown code fences if Claude includes them
     response_text = re.sub(
         r"^```(?:json)?\s*|\s*```$",
         "",
@@ -104,11 +95,10 @@ def extract_json(response_text):
 
     except json.JSONDecodeError:
 
-        # Try to extract a JSON object from the response
         start = response_text.find("{")
         end = response_text.rfind("}")
 
-        if start != -1 and end != -1 and end > start:
+        if start != -1 and end > start:
 
             try:
                 return json.loads(
@@ -127,25 +117,21 @@ def extract_json(response_text):
 
 def validate_response(response):
 
-    try:
-        data = json.loads(response)
+    data = extract_json(response)
 
-        if not isinstance(data, dict):
-            return None
-
-        if not isinstance(data.get("reply"), str):
-            return None
-
-        if not data["reply"].strip():
-            return None
-
-        if "suggested_action" not in data:
-            return None
-
-        return data
-
-    except (json.JSONDecodeError, TypeError):
+    if not isinstance(data, dict):
         return None
+
+    if not isinstance(data.get("reply"), str):
+        return None
+
+    if not data["reply"].strip():
+        return None
+
+    if "suggested_action" not in data:
+        return None
+
+    return data
 
 
 # ==========================================
@@ -155,6 +141,7 @@ def validate_response(response):
 def ask_claude(question, applications=None, history=None):
 
     if client is None:
+
         return {
             "reply": (
                 "Claude API key is missing. "
@@ -163,128 +150,75 @@ def ask_claude(question, applications=None, history=None):
             "suggested_action": None
         }
 
-    try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=2048,
-            system=SYSTEM_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": user_prompt
-                }
-            ]
-        )
+    history = history or []
 
-        response_text = "\n".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
+    # Build the current user's prompt
+    user_prompt = build_user_prompt(
+        question,
+        applications,
+        None
+    )
 
-        # Remove possible Markdown code fences
-        response_text = re.sub(
-            r"^```(?:json)?\s*|\s*```$",
-            "",
-            response_text.strip(),
-            flags=re.IGNORECASE
-        )
+    # Prepare previous conversation messages
+    messages = []
 
-        result = validate_response(response_text)
+    for message in history:
 
-        if result is not None:
-            return result
+        if message.get("role") in ("user", "assistant"):
 
-        print(f"Invalid response. Retry {attempt + 1}...")
+            messages.append({
+                "role": message["role"],
+                "content": message["content"]
+            })
 
-        # Retrieve relevant information from knowledge.txt
-        relevant_knowledge = retrieve_knowledge(question)
+    # Add the current question
+    messages.append({
+        "role": "user",
+        "content": user_prompt
+    })
 
-        # Build the user's prompt, including application information
-        user_prompt = build_user_prompt(
-            question,
-            applications,
-            None
-        )
+    # Retry if Claude returns an invalid response
+    for attempt in range(2):
 
-        complete_prompt = f"""
-{user_prompt}
-# ==========================================
-# 5. CONNECT AI WITH MEMORY
-# ==========================================
+        try:
 
-RELEVANT KNOWLEDGE RETRIEVED FROM CAREERTRACK AI:
+            response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=2048,
+                system=SYSTEM_PROMPT,
+                messages=messages
+            )
 
-{relevant_knowledge}
+            response_text = "\n".join(
+                block.text
+                for block in response.content
+                if block.type == "text"
+            )
 
-Use the retrieved knowledge when it is relevant.
-Use the conversation history to understand previous questions.
-Do not invent job applications or personal information.
+            result = validate_response(response_text)
 
-Return ONLY valid JSON in this exact format:
+            if result is not None:
+                return result
 
-{{
-    "reply": "Your helpful answer here",
-    "suggested_action": null
-}}
-"""
+            print(
+                f"Invalid Claude response. "
+                f"Retry {attempt + 1}..."
+            )
 
-        # Include previous conversation messages
-        messages = []
-
-        for message in history or []:
-
-            if message["role"] in ("user", "assistant"):
-
-                messages.append({
-                    "role": message["role"],
-                    "content": message["content"]
-                })
-
-        # Add the current question and retrieved knowledge
-        messages.append({
-            "role": "user",
-            "content": complete_prompt
-        })
-
-        # Send the request to the real Claude API
-        response = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=1500,
-            system=SYSTEM_PROMPT,
-            messages=messages
-        )
-
-        # Extract Claude's text response
-        response_text = "".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
-
-        result = validate_response(response_text)
-
-        if result is not None:
-            return result
-
-        # Fallback if Claude returns text instead of JSON
-        return {
-            "reply": response_text,
-            "suggested_action": None
-        }
-
-    except Exception as error:
+        except Exception as error:
 
             print("Claude API error:", error)
 
-            return {
-                "reply": (
-                    "Unable to connect to Claude AI. "
-                    "Please check your internet connection, "
-                    "API key and API account."
-                ),
-                "suggested_action": None
-            }
+            if attempt == 1:
+
+                return {
+                    "reply": (
+                        "Unable to connect to Claude AI. "
+                        "Please check your internet connection, "
+                        "API key and API account."
+                    ),
+                    "suggested_action": None
+                }
 
     return {
         "reply": "Unable to generate a valid response.",
@@ -308,7 +242,10 @@ def ask_with_memory(question, memory, applications=None):
         history
     )
 
-    memory.add_message("assistant", result["reply"])
+    memory.add_message(
+        "assistant",
+        result["reply"]
+    )
 
     memory.save()
 
@@ -324,7 +261,7 @@ def simulate_claude_summary(history):
     user_questions = [
         message["content"]
         for message in history
-        if message["role"] == "user"
+        if message.get("role") == "user"
     ]
 
     companies = []
@@ -403,8 +340,8 @@ def simulate_claude_summary(history):
     else:
 
         summary = (
-            "The user discussed career development and job application "
-            "management with CareerTrack AI."
+            "The user discussed career development and job "
+            "application management with CareerTrack AI."
         )
 
     key_advice = []
@@ -454,18 +391,16 @@ def simulate_claude_summary(history):
 
 def validate_summary(response):
 
-    try:
+    data = extract_json(response)
 
-        data = json.loads(response)
+    if not isinstance(data, dict):
+        return None
 
-        if not isinstance(data, dict):
-            return None
+    if not isinstance(data.get("summary"), str):
+        return None
 
-        if not isinstance(data.get("summary"), str):
-            return None
-
-        if not data["summary"].strip():
-            return None
+    if not data["summary"].strip():
+        return None
 
     required_lists = [
         "topics_discussed",
@@ -473,15 +408,12 @@ def validate_summary(response):
         "suggested_next_steps"
     ]
 
-        for field in required_lists:
+    for field in required_lists:
 
-            if not isinstance(data.get(field), list):
-                return None
+        if not isinstance(data.get(field), list):
+            return None
 
     return data
-
-    except (json.JSONDecodeError, TypeError):
-        return None
 
 
 # ==========================================
@@ -491,6 +423,7 @@ def validate_summary(response):
 def generate_session_summary(history):
 
     if client is None:
+
         print("Claude API key is missing.")
         return None
 
@@ -500,60 +433,41 @@ def generate_session_summary(history):
 
         try:
 
-        response = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=1500,
-            system=SUMMARY_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": complete_summary_prompt
-                }
-            ]
-        )
+            response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=1500,
+                system=SUMMARY_PROMPT,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": summary_prompt
+                    }
+                ]
+            )
 
-        response_text = "".join(
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=2048,
-            system=SUMMARY_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": summary_prompt
-                }
-            ]
-        )
-
-        response_text = "\n".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
-
-        # Remove possible Markdown code fences
-        response_text = re.sub(
-            r"^```(?:json)?\s*|\s*```$",
-            "",
-            response_text.strip(),
-            flags=re.IGNORECASE
-        )
+            response_text = "\n".join(
+                block.text
+                for block in response.content
+                if block.type == "text"
+            )
 
             result = validate_summary(response_text)
 
             if result is not None:
                 return result
 
-        print("Claude returned an invalid summary format.")
-        return None
+            print(
+                f"Invalid summary response. "
+                f"Retry {attempt + 1}..."
+            )
 
         except Exception as error:
 
             print("Summary generation error:", error)
-            return None
-
 
     return None
+
+
 # ==========================================
 # 10. SAVE COMPLETE SESSION
 # ==========================================
@@ -563,6 +477,7 @@ def finalize_session(memory):
     history = memory.get_history()
 
     if not history:
+
         print("No conversation available to summarize.")
         return None
 
@@ -571,10 +486,13 @@ def finalize_session(memory):
     summary = generate_session_summary(history)
 
     if summary is None:
+
         print("Unable to generate a valid summary.")
         return None
 
-    session_folder = Path(__file__).resolve().parent / "sessions"
+    session_folder = (
+        Path(__file__).resolve().parent / "sessions"
+    )
 
     session_folder.mkdir(exist_ok=True)
 
