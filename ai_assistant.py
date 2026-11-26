@@ -33,11 +33,20 @@ def identify_company(question, history=None):
     # Search previous questions for company names
     for message in reversed(messages):
 
-        pattern = r"\b(?:at|with|to)\s+([A-Za-z0-9][A-Za-z0-9&.'’ -]{0,60}?)(?=\s*[,.!?;]|\s+(?:for|as|and)\s+|$)"
+        pattern = (
+            r"\b(?:at|with|to)\s+"
+            r"([A-Za-z0-9][A-Za-z0-9&.'’ -]{0,60}?)"
+            r"(?=\s*[,.!?;]|\s+(?:for|as|and)\s+|$)"
+        )
 
-        matches = re.findall(pattern, message, re.IGNORECASE)
+        matches = re.findall(
+            pattern,
+            message,
+            re.IGNORECASE
+        )
 
         if matches:
+
             company = matches[-1].strip()
 
             ignored = [
@@ -65,56 +74,88 @@ def simulate_claude_response(question, history=None):
 
     question_lower = question.lower()
 
-    # Check whether the user is asking about interviews
-    interview_keywords = [
-        "interview",
-        "prepare for",
-        "interview questions",
-        "expect for this position",
-        "expect in the interview"
+    # Check whether the user wants to recall a company
+    company_recall_phrases = [
+        "which company did i mention",
+        "what company did i mention",
+        "which employer did i mention",
+        "what employer did i mention",
+        "which company am i interviewing",
+        "what company am i interviewing",
+        "which company is my interview with",
+        "who am i interviewing with"
     ]
 
-    if any(word in question_lower for word in interview_keywords):
+    if any(
+        phrase in question_lower
+        for phrase in company_recall_phrases
+    ):
 
         if company:
+            reply = f"You previously mentioned {company}."
 
+        else:
             reply = (
-                f"Let's prepare you for your opportunity at "
-                f"{company}.\n\n"
-                "Here are some interview questions to practise:\n\n"
-                "1. Tell us about yourself.\n"
-                f"2. Why do you want to work at {company}?\n"
-                "3. What relevant skills and experience do you have?\n"
-                "4. What do you know about our company?\n"
-                "5. How would you handle a challenging situation?\n"
-                "6. What are your strengths and weaknesses?\n"
-                "7. Where do you see yourself in five years?\n\n"
-                "Preparation tips:\n"
-                "- Research the company's products and services.\n"
-                "- Understand the responsibilities of the position.\n"
-                "- Practise answering questions confidently.\n"
-                "- Prepare examples from your previous experience."
+                "I could not find a company name "
+                "in our previous conversation."
             )
 
+    # Check whether the user is asking about interviews
+    else:
+
+        interview_keywords = [
+            "interview",
+            "prepare for",
+            "interview questions",
+            "expect for this position",
+            "expect in the interview"
+        ]
+
+        if any(
+            word in question_lower
+            for word in interview_keywords
+        ):
+
+            if company:
+
+                reply = (
+                    f"Let's prepare you for your opportunity at "
+                    f"{company}.\n\n"
+                    "Here are some interview questions to practise:\n\n"
+                    "1. Tell us about yourself.\n"
+                    f"2. Why do you want to work at {company}?\n"
+                    "3. What relevant skills and experience do you have?\n"
+                    "4. What do you know about our company?\n"
+                    "5. How would you handle a challenging situation?\n"
+                    "6. What are your strengths and weaknesses?\n"
+                    "7. Where do you see yourself in five years?\n\n"
+                    "Preparation tips:\n"
+                    "- Research the company's products and services.\n"
+                    "- Understand the responsibilities of the position.\n"
+                    "- Practise answering questions confidently.\n"
+                    "- Prepare examples from your previous experience."
+                )
+
+            else:
+
+                reply = (
+                    "Here are some common interview questions to practise:\n\n"
+                    "1. Tell us about yourself.\n"
+                    "2. Why should we hire you?\n"
+                    "3. What are your strengths and weaknesses?\n"
+                    "4. What relevant experience do you have?\n"
+                    "5. Where do you see yourself in five years?\n\n"
+                    "Research the employer and the position before your interview."
+                )
+
+        # General response
         else:
 
             reply = (
-                "Here are some common interview questions to practise:\n\n"
-                "1. Tell us about yourself.\n"
-                "2. Why should we hire you?\n"
-                "3. What are your strengths and weaknesses?\n"
-                "4. What relevant experience do you have?\n"
-                "5. Where do you see yourself in five years?\n\n"
-                "Research the employer and the position before your interview."
+                "This is a simulated CareerTrack AI response. "
+                f"You asked: {question}. "
+                "I can help you manage and improve your job applications."
             )
-
-    else:
-
-        reply = (
-            "This is a simulated CareerTrack AI response. "
-            f"You asked: {question}. "
-            "I can help you manage and improve your job applications."
-        )
 
     response = {
         "reply": reply,
@@ -131,6 +172,7 @@ def simulate_claude_response(question, history=None):
 def validate_response(response):
 
     try:
+
         data = json.loads(response)
 
         if not isinstance(data, dict):
@@ -148,6 +190,7 @@ def validate_response(response):
         return data
 
     except (json.JSONDecodeError, TypeError):
+
         return None
 
 
@@ -199,7 +242,10 @@ def ask_with_memory(question, memory, applications=None):
         history
     )
 
-    memory.add_message("assistant", result["reply"])
+    memory.add_message(
+        "assistant",
+        result["reply"]
+    )
 
     memory.save()
 
@@ -210,8 +256,8 @@ def ask_with_memory(question, memory, applications=None):
 # 6. SIMULATE FINAL AI SUMMARY
 # ==========================================
 
-
 def simulate_claude_summary(history):
+
     user_questions = [
         message["content"]
         for message in history
@@ -222,7 +268,8 @@ def simulate_claude_summary(history):
     positions = []
 
     for question in user_questions:
-        # Identify employers mentioned in the conversation
+
+        # Identify employers mentioned in conversation
         company = identify_company(question, [])
 
         if company and company.lower() not in [
@@ -232,12 +279,14 @@ def simulate_claude_summary(history):
 
         # Identify job positions mentioned by the user
         match = re.search(
-            r"\b(?:applied|applying|apply)\s+for\s+(?:an?\s+)?(.+?)\s+(?:position|role|job)\b",
+            r"\b(?:applied|applying|apply)\s+for\s+"
+            r"(?:an?\s+)?(.+?)\s+(?:position|role|job)\b",
             question,
             re.IGNORECASE
         )
 
         if match:
+
             position = match.group(1).strip()
 
             if position.lower() not in [
@@ -247,15 +296,22 @@ def simulate_claude_summary(history):
 
     # Identify the main discussion topics
     all_questions = " ".join(user_questions).lower()
+
     topics = []
 
     if "interview" in all_questions:
         topics.append("Interview preparation")
 
-    if any(word in all_questions for word in ["application", "applied", "job"]):
+    if any(
+        word in all_questions
+        for word in ["application", "applied", "job"]
+    ):
         topics.append("Job application management")
 
-    if any(word in all_questions for word in ["career", "experience", "skills"]):
+    if any(
+        word in all_questions
+        for word in ["career", "experience", "skills"]
+    ):
         topics.append("Career development")
 
     if not topics:
@@ -275,12 +331,17 @@ def simulate_claude_summary(history):
         )
 
     if summary_parts:
+
         summary = (
-            "The user discussed " + " and ".join(summary_parts)
+            "The user discussed "
+            + " and ".join(summary_parts)
             + ". The main focus was "
-            + ", ".join(topics).lower() + "."
+            + ", ".join(topics).lower()
+            + "."
         )
+
     else:
+
         summary = (
             "The user discussed career development and job application "
             "management with CareerTrack AI."
@@ -290,6 +351,7 @@ def simulate_claude_summary(history):
     key_advice = []
 
     if "Interview preparation" in topics:
+
         key_advice.extend([
             "Prepare answers to common interview questions.",
             "Research each employer before attending an interview.",
@@ -297,12 +359,14 @@ def simulate_claude_summary(history):
         ])
 
     if "Job application management" in topics:
+
         key_advice.extend([
             "Keep application records updated.",
             "Monitor application progress and follow up when appropriate."
         ])
 
     if not key_advice:
+
         key_advice.append(
             "Continue using CareerTrack AI to support career development."
         )
@@ -325,6 +389,7 @@ def simulate_claude_summary(history):
 
     return json.dumps(response, indent=4)
 
+
 # ==========================================
 # 7. VALIDATE SUMMARY RESPONSE
 # ==========================================
@@ -332,6 +397,7 @@ def simulate_claude_summary(history):
 def validate_summary(response):
 
     try:
+
         data = json.loads(response)
 
         if not isinstance(data, dict):
@@ -357,6 +423,7 @@ def validate_summary(response):
         return data
 
     except (json.JSONDecodeError, TypeError):
+
         return None
 
 
@@ -391,6 +458,7 @@ def finalize_session(memory):
     history = memory.get_history()
 
     if not history:
+
         print("No conversation available to summarize.")
         return None
 
@@ -399,15 +467,21 @@ def finalize_session(memory):
     summary = generate_session_summary(history)
 
     if summary is None:
+
         print("Unable to generate a valid summary.")
         return None
 
     # Create sessions folder
-    session_folder = Path(__file__).resolve().parent / "sessions"
+    session_folder = (
+        Path(__file__).resolve().parent / "sessions"
+    )
+
     session_folder.mkdir(exist_ok=True)
 
     # Generate dated filename
-    current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    current_date = datetime.now().strftime(
+        "%Y-%m-%d_%H-%M-%S"
+    )
 
     filename = (
         f"session_{current_date}_{memory.session_id}.json"
@@ -424,10 +498,18 @@ def finalize_session(memory):
     }
 
     with open(file_path, "w", encoding="utf-8") as file:
-        json.dump(session_data, file, indent=4)
+
+        json.dump(
+            session_data,
+            file,
+            indent=4
+        )
 
     print("\nSESSION SUMMARY")
-    print(json.dumps(summary, indent=4))
+
+    print(
+        json.dumps(summary, indent=4)
+    )
 
     print("\nSession saved successfully!")
     print("File:", file_path)
@@ -459,6 +541,7 @@ if __name__ == "__main__":
             finalize_session(memory)
 
             print("\nThank you for using CareerTrack AI!")
+
             break
 
         if not question:
@@ -466,7 +549,10 @@ if __name__ == "__main__":
             print("Please enter a question.")
             continue
 
-        result = ask_with_memory(question, memory)
+        result = ask_with_memory(
+            question,
+            memory
+        )
 
         print("\nCareerTrack AI:")
         print(result["reply"])
