@@ -20,25 +20,16 @@ from rag import retrieve_knowledge
 
 
 # ==========================================
-# 1. LOAD CLAUDE API KEY
+# 1. LOAD ENVIRONMENT VARIABLES
 # ==========================================
 
 load_dotenv()
 
 API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
-# Create the Claude client if the API key exists
 client = Anthropic(api_key=API_KEY) if API_KEY else None
 
-# Claude model
-CLAUDE_MODEL = "claude-sonnet-5-5"
-from anthropic import Anthropic
-from dotenv import load_dotenv
-# Load environment variables
-load_dotenv()
-
-# Connect to Claude API
-client = Anthropic()
+CLAUDE_MODEL = "claude-sonnet-4-6"
 
 
 # ==========================================
@@ -99,7 +90,7 @@ def extract_json(response_text):
 
     response_text = response_text.strip()
 
-    # Remove Markdown code fences if Claude includes them
+    # Remove Markdown code fences
     response_text = re.sub(
         r"^```(?:json)?\s*|\s*```$",
         "",
@@ -112,7 +103,7 @@ def extract_json(response_text):
 
     except json.JSONDecodeError:
 
-        # Try to extract a JSON object from the response
+        # Attempt to extract a JSON object
         start = response_text.find("{")
         end = response_text.rfind("}")
 
@@ -156,7 +147,6 @@ def validate_response(response):
 # 5. ASK CLAUDE USING REAL API AND RAG
 # ==========================================
 
-
 def ask_claude(question, applications=None, history=None):
 
     if client is None:
@@ -164,44 +154,24 @@ def ask_claude(question, applications=None, history=None):
         return {
             "reply": (
                 "Claude API key is missing. "
-                "Please check your .env file."
+                "Please check your .env file and ensure "
+                "ANTHROPIC_API_KEY is configured."
             ),
             "suggested_action": None
         }
 
+    history = history or []
+
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=2048,
-            system=SYSTEM_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": user_prompt
-                }
-            ]
-        )
 
-        response_text = "\n".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
+        # Retrieve relevant information from knowledge base
+        try:
+            relevant_knowledge = retrieve_knowledge(question)
 
-        # Remove possible Markdown code fences
-        response_text = re.sub(
-            r"^```(?:json)?\s*|\s*```$",
-            "",
-            response_text.strip(),
-            flags=re.IGNORECASE
-        )
+        except Exception as rag_error:
 
-        result = validate_response(response_text)
-
-        if result is not None:
-            return result
-
-        print(f"Invalid response. Retry {attempt + 1}...")
+            print("Knowledge retrieval error:", rag_error)
+            relevant_knowledge = ""
 
         # Retrieve relevant information from knowledge.txt
         relevant_knowledge = retrieve_knowledge(question)
@@ -224,7 +194,7 @@ RELEVANT KNOWLEDGE RETRIEVED FROM CAREERTRACK AI:
 {relevant_knowledge}
 
 Use the retrieved knowledge when it is relevant.
-Use the conversation history to understand previous questions.
+Use conversation history to understand previous questions.
 Do not invent job applications or personal information.
 
 Return ONLY valid JSON in this exact format:
@@ -238,7 +208,7 @@ Return ONLY valid JSON in this exact format:
         # Include previous conversation messages
         messages = []
 
-        for message in history or []:
+        for message in history:
 
             if message["role"] in ("user", "assistant"):
 
@@ -247,35 +217,44 @@ Return ONLY valid JSON in this exact format:
                     "content": message["content"]
                 })
 
-        # Add the current question and retrieved knowledge
+        # Add the current question
         messages.append({
             "role": "user",
             "content": complete_prompt
         })
 
-        # Send the request to the real Claude API
-        response = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=1500,
-            system=SYSTEM_PROMPT,
-            messages=messages
-        )
+        # Retry invalid responses
+        for attempt in range(2):
 
-        # Extract Claude's text response
-        response_text = "".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
+            response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=2048,
+                system=SYSTEM_PROMPT,
+                messages=messages
+            )
 
-        result = validate_response(response_text)
+            # Extract Claude's text response
+            response_text = "\n".join(
+                block.text
+                for block in response.content
+                if block.type == "text"
+            )
 
-        if result is not None:
-            return result
+            result = validate_response(response_text)
 
-        # Fallback if Claude returns text instead of JSON
+            if result is not None:
+                return result
+
+            print(
+                f"Invalid Claude response. "
+                f"Retry {attempt + 1}..."
+            )
+
         return {
-            "reply": response_text,
+            "reply": (
+                "Unable to generate a valid response. "
+                "Please try asking your question again."
+            ),
             "suggested_action": None
         }
 
@@ -342,6 +321,8 @@ def validate_summary(response):
         return None
 
     required_lists = [
+        "companies_discussed",
+        "positions_discussed",
         "topics_discussed",
         "key_advice",
         "suggested_next_steps"
@@ -350,6 +331,12 @@ def validate_summary(response):
     for field in required_lists:
 
         if not isinstance(data.get(field), list):
+            return None
+
+        if not all(
+            isinstance(item, str)
+            for item in data[field]
+        ):
             return None
 
     return data
@@ -412,24 +399,62 @@ Do not invent information that was not discussed.
             ]
         )
 
-        response_text = "\n".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
+        summary_prompt = build_summary_prompt(history)
 
-        # Remove possible Markdown code fences
-        response_text = re.sub(
-            r"^```(?:json)?\s*|\s*```$",
-            "",
-            response_text.strip(),
-            flags=re.IGNORECASE
-        )
+        complete_summary_prompt = f"""
+{summary_prompt}
 
-        result = validate_summary(response_text)
+Return ONLY valid JSON using this structure:
 
-        if result is not None:
-            return result
+{{
+    "summary": "A short summary of the conversation",
+    "companies_discussed": [],
+    "positions_discussed": [],
+    "topics_discussed": [],
+    "key_advice": [],
+    "suggested_next_steps": []
+}}
+
+Do not invent information that was not discussed.
+"""
+
+        for attempt in range(2):
+
+            response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=2048,
+                system=SUMMARY_PROMPT,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": complete_summary_prompt
+                    }
+                ]
+            )
+
+            response_text = "\n".join(
+                block.text
+                for block in response.content
+                if block.type == "text"
+            )
+
+            result = validate_summary(response_text)
+
+            if result is not None:
+                return result
+
+            print(
+                f"Invalid summary response. "
+                f"Retry {attempt + 1}..."
+            )
+
+        print("Claude returned an invalid summary format.")
+        return None
+
+    except Exception as error:
+
+        print("Summary API error:", error)
+        return None
 
         print("Claude returned an invalid summary format.")
         return None
@@ -440,7 +465,6 @@ Do not invent information that was not discussed.
         return None
 
 
-    return None
 # ==========================================
 # 9. SAVE COMPLETE SESSION
 # ==========================================
@@ -481,7 +505,6 @@ def finalize_session(memory):
 
     file_path = session_folder / filename
 
-    # Save conversation and summary together
     session_data = {
         "session_id": memory.session_id,
         "date": current_date,
@@ -494,7 +517,8 @@ def finalize_session(memory):
         json.dump(
             session_data,
             file,
-            indent=4
+            indent=4,
+            ensure_ascii=False
         )
 
     print("\nSESSION SUMMARY")
