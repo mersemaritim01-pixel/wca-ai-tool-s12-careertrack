@@ -52,5 +52,23 @@
         "application_date": "2026-11-22",
         "status": "Applied",
         "notes": "share interview dates"
+    },
+    {
+        "id": "db3cd381-bf99-4b65-ad7f-c8a0901407aa",
+        "company": "NCBA Bank",
+        "job_title": "Customer Service Officer",
+        "location": "Nairobi",
+        "application_date": "2026-11-23",
+        "status": "Interview",
+        "notes": "Application submitted successfully."
+    },
+    {
+        "id": "9b91cef7-716b-456a-8db6-b6a484408a08",
+        "company": "NCBA Bank",
+        "job_title": "Customer Service Officer",
+        "location": "Nairobi",
+        "application_date": "2026-11-23",
+        "status": "Interview",
+        "notes": "Application submitted successfully."
     }
 ]
