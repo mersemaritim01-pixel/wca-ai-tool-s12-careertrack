@@ -283,7 +283,7 @@ Future development will focus on expanding CareerTrack AI into a more comprehens
 Developed collaboratively for **WECAN Season 12**.
 
 1. Mercy Chepkurui
-2. David Muhuha Maina
+2. David  Muhuha Maina
 3. Florence Muthoni Wanjiru
 
 ## 14.Team Responsibilities
