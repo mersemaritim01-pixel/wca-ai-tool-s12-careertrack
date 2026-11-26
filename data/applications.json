@@ -100,5 +100,14 @@
         "follow_up_date": "",
         "status": "Interview",
         "notes": "Application submitted successfully."
+    },
+    {
+        "id": "4ab888dc-8346-4505-bdb0-62ad3cdea04e",
+        "company": "NCBA Bank",
+        "job_title": "Customer Service Officer",
+        "location": "Nairobi",
+        "application_date": "2026-11-27",
+        "status": "Interview",
+        "notes": "Application submitted successfully."
     }
 ]
