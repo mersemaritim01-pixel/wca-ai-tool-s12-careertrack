@@ -6,7 +6,10 @@
         "location": "Nairobi",
         "application_date": "2026-11-20",
         "status": "Interview",
-        "notes": "Application submitted successfully."
+        "notes": "Application submitted successfully.",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "fc112dd5-6bb2-4ab1-99a4-cc7b3a5b9402",
@@ -15,7 +18,10 @@
         "location": "Nairobi",
         "application_date": "2026-11-20",
         "status": "Interview",
-        "notes": "Application submitted successfully."
+        "notes": "Application submitted successfully.",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "6322de72-bf60-486d-886a-625bd62ee456",
