@@ -173,16 +173,21 @@ def ask_claude(question, applications=None, history=None):
             print("Knowledge retrieval error:", rag_error)
             relevant_knowledge = ""
 
-        # Build the user's prompt with application information
+        # Retrieve relevant information from knowledge.txt
+        relevant_knowledge = retrieve_knowledge(question)
+
+        # Build the user's prompt, including application information
         user_prompt = build_user_prompt(
             question,
             applications,
             None
         )
 
-        # Combine the prompt with retrieved knowledge
         complete_prompt = f"""
 {user_prompt}
+# ==========================================
+# 5. CONNECT AI WITH MEMORY
+# ==========================================
 
 RELEVANT KNOWLEDGE RETRIEVED FROM CAREERTRACK AI:
 
@@ -369,6 +374,50 @@ Return ONLY valid JSON using this structure:
 Do not invent information that was not discussed.
 """
 
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1500,
+            system=SUMMARY_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": complete_summary_prompt
+                }
+            ]
+        )
+
+        response_text = "".join(
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=SUMMARY_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": summary_prompt
+                }
+            ]
+        )
+
+        summary_prompt = build_summary_prompt(history)
+
+        complete_summary_prompt = f"""
+{summary_prompt}
+
+Return ONLY valid JSON using this structure:
+
+{{
+    "summary": "A short summary of the conversation",
+    "companies_discussed": [],
+    "positions_discussed": [],
+    "topics_discussed": [],
+    "key_advice": [],
+    "suggested_next_steps": []
+}}
+
+Do not invent information that was not discussed.
+"""
+
         for attempt in range(2):
 
             response = client.messages.create(
@@ -398,6 +447,14 @@ Do not invent information that was not discussed.
                 f"Invalid summary response. "
                 f"Retry {attempt + 1}..."
             )
+
+        print("Claude returned an invalid summary format.")
+        return None
+
+    except Exception as error:
+
+        print("Summary API error:", error)
+        return None
 
         print("Claude returned an invalid summary format.")
         return None
@@ -500,6 +557,7 @@ if __name__ == "__main__":
             finalize_session(memory)
 
             print("\nThank you for using CareerTrack AI!")
+
             break
 
         if not question:
