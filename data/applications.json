@@ -30,33 +30,51 @@
         "location": "nairobi",
         "application_date": "2026-11-20",
         "status": "Applied",
-        "notes": "when is the interview",
-        "salary": "",
-        "interview_date": "",
-        "follow_up_date": ""
+        "notes": "when is the interview"
     },
     {
-        "id": "0bff102a-db3e-4b7f-a540-03cec575d6f8",
-        "company": "ABC Technologies",
-        "job_title": "Junior Python Developer",
-        "location": "Nairobi",
-        "salary": "KES 50,000",
-        "application_date": "2026-11-26",
-        "interview_date": "2026-12-05",
-        "follow_up_date": "2026-12-08",
+        "id": "04dda926-ef57-4274-aad5-f647005e922d",
+        "company": "equity bank",
+        "job_title": "business banker",
+        "location": "ruiru",
+        "application_date": "2026-11-21",
         "status": "Applied",
-        "notes": "Fictional application for testing"
+        "notes": "need an IRA liense"
     },
     {
-        "id": "743007e2-ff51-4a3c-9724-d69d606782dd",
-        "company": "safaricom",
-        "job_title": "accountant",
+        "id": "c54e8c71-4201-4fb7-9b56-71015ea06079",
+        "company": "sharon cherono",
+        "job_title": "kcb bank",
         "location": "nairobi",
-        "salary": "55000",
-        "application_date": "2026-11-26",
-        "interview_date": "",
-        "follow_up_date": "",
+        "application_date": "2026-11-21",
         "status": "Applied",
-        "notes": ""
+        "notes": "ready to start working"
+    },
+    {
+        "id": "d572273c-17ed-4495-9d86-c74a32b42138",
+        "company": "co-operative bank",
+        "job_title": "loan officer",
+        "location": "nairobi",
+        "application_date": "2026-11-22",
+        "status": "Applied",
+        "notes": "share interview dates"
+    },
+    {
+        "id": "db3cd381-bf99-4b65-ad7f-c8a0901407aa",
+        "company": "NCBA Bank",
+        "job_title": "Customer Service Officer",
+        "location": "Nairobi",
+        "application_date": "2026-11-23",
+        "status": "Interview",
+        "notes": "Application submitted successfully."
+    },
+    {
+        "id": "9b91cef7-716b-456a-8db6-b6a484408a08",
+        "company": "NCBA Bank",
+        "job_title": "Customer Service Officer",
+        "location": "Nairobi",
+        "application_date": "2026-11-23",
+        "status": "Interview",
+        "notes": "Application submitted successfully."
     }
 ]

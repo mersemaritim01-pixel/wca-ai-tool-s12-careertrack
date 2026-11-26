@@ -1,4 +1,45 @@
+def display_menu():
+    print("\n" + "=" * 40)
+    print("       JOB APPLICATION TRACKER")
+    print("=" * 40)
 
+    print("1. Start a new conversation")
+    print("2. View saved conversations")
+    print("3. View job applications")
+    print("4. View conversation summary")
+    print("5. Exit")
+
+    print("=" * 40)
+
+
+def main():
+    while True:
+        display_menu()
+
+        choice = input("Choose an option (1-5): ")
+
+        if choice == "1":
+            print("\nStarting a new conversation...")
+
+        elif choice == "2":
+            print("\nSaved conversations will appear here.")
+
+        elif choice == "3":
+            print("\nYour job applications will appear here.")
+
+        elif choice == "4":
+            print("\nYour conversation summary will appear here.")
+
+        elif choice == "5":
+            print("\nThank you for using Job Application Tracker!")
+            break
+
+        else:
+            print("\nInvalid choice. Please try again.")
+
+
+if __name__ == "__main__":
+    main()
 from job_tracker import JobTracker
 from summary import display_summary
 from memory import ConversationMemory
@@ -180,23 +221,30 @@ def search_applications(tracker):
         print("Follow-up Date:", app.get("follow_up_date", "Not set"))
         print("Application ID:", app["id"])
 
+
 def ask_ai(memory, tracker):
     print("\n--- CAREERTRACK AI ASSISTANT ---")
 
-    question = input("Ask your question: ")
+    question = input("Ask your question: ").strip()
 
-    if not question.strip():
+    if not question:
         print("Please enter a question.")
         return
 
-    result = ask_with_memory(
-        question,
-        memory,
-        tracker.view_applications()
-    )
+    try:
+        result = ask_with_memory(
+            question,
+            memory,
+            tracker.view_applications()
+        )
 
-    print("\nCareerTrack AI:")
-    print(result["reply"])
+        print("\nCareerTrack AI:")
+        print(result["reply"])
+
+    except Exception as error:
+        print("\nUnable to connect to the AI assistant.")
+        print("Error:", error)
+        print("Please check your API configuration and try again.")
 
 def display_session_menu():
     print("\n====================================")

@@ -32,6 +32,13 @@ client = Anthropic(api_key=API_KEY) if API_KEY else None
 
 # Claude model
 CLAUDE_MODEL = "claude-sonnet-5-5"
+from anthropic import Anthropic
+from dotenv import load_dotenv
+# Load environment variables
+load_dotenv()
+
+# Connect to Claude API
+client = Anthropic()
 
 
 # ==========================================
@@ -149,6 +156,7 @@ def validate_response(response):
 # 5. ASK CLAUDE USING REAL API AND RAG
 # ==========================================
 
+
 def ask_claude(question, applications=None, history=None):
 
     if client is None:
@@ -162,6 +170,38 @@ def ask_claude(question, applications=None, history=None):
         }
 
     try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ]
+        )
+
+        response_text = "\n".join(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
+
+        # Remove possible Markdown code fences
+        response_text = re.sub(
+            r"^```(?:json)?\s*|\s*```$",
+            "",
+            response_text.strip(),
+            flags=re.IGNORECASE
+        )
+
+        result = validate_response(response_text)
+
+        if result is not None:
+            return result
+
+        print(f"Invalid response. Retry {attempt + 1}...")
 
         # Retrieve relevant information from knowledge.txt
         relevant_knowledge = retrieve_knowledge(question)
@@ -175,6 +215,9 @@ def ask_claude(question, applications=None, history=None):
 
         complete_prompt = f"""
 {user_prompt}
+# ==========================================
+# 5. CONNECT AI WITH MEMORY
+# ==========================================
 
 RELEVANT KNOWLEDGE RETRIEVED FROM CAREERTRACK AI:
 
@@ -357,9 +400,30 @@ Do not invent information that was not discussed.
         )
 
         response_text = "".join(
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=SUMMARY_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": summary_prompt
+                }
+            ]
+        )
+
+        response_text = "\n".join(
             block.text
             for block in response.content
             if block.type == "text"
+        )
+
+        # Remove possible Markdown code fences
+        response_text = re.sub(
+            r"^```(?:json)?\s*|\s*```$",
+            "",
+            response_text.strip(),
+            flags=re.IGNORECASE
         )
 
         result = validate_summary(response_text)
@@ -376,6 +440,7 @@ Do not invent information that was not discussed.
         return None
 
 
+    return None
 # ==========================================
 # 9. SAVE COMPLETE SESSION
 # ==========================================
