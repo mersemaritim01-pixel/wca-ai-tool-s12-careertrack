@@ -26,7 +26,15 @@ API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 client = Anthropic(api_key=API_KEY) if API_KEY else None
 
-MODEL = "claude-sonnet-4-6"
+# Claude model
+CLAUDE_MODEL = "claude-sonnet-4-6"
+from anthropic import Anthropic
+from dotenv import load_dotenv
+# Load environment variables
+load_dotenv()
+
+# Connect to Claude API
+client = Anthropic()
 
 
 # ==========================================
@@ -76,68 +84,41 @@ def identify_company(question, history=None):
 # 3. SIMULATE CLAUDE RESPONSE
 # ==========================================
 
-def simulate_claude_response(question, history=None):
+def extract_json(response_text):
 
-    history = history or []
+    if not isinstance(response_text, str):
+        return None
 
-    company = identify_company(question, history)
+    response_text = response_text.strip()
 
-    question_lower = question.lower()
+    # Remove Markdown code fences if Claude includes them
+    response_text = re.sub(
+        r"^```(?:json)?\s*|\s*```$",
+        "",
+        response_text,
+        flags=re.IGNORECASE
+    )
 
-    interview_keywords = [
-        "interview",
-        "prepare for",
-        "interview questions",
-        "expect for this position",
-        "expect in the interview"
-    ]
+    try:
+        return json.loads(response_text)
 
-    if any(word in question_lower for word in interview_keywords):
+    except json.JSONDecodeError:
 
-        if company:
+        # Try to extract a JSON object from the response
+        start = response_text.find("{")
+        end = response_text.rfind("}")
 
-            reply = (
-                f"Let's prepare you for your opportunity at "
-                f"{company}.\n\n"
-                "Here are some interview questions to practise:\n\n"
-                "1. Tell us about yourself.\n"
-                f"2. Why do you want to work at {company}?\n"
-                "3. What relevant skills and experience do you have?\n"
-                "4. What do you know about our company?\n"
-                "5. How would you handle a challenging situation?\n"
-                "6. What are your strengths and weaknesses?\n"
-                "7. Where do you see yourself in five years?\n\n"
-                "Preparation tips:\n"
-                "- Research the company's products and services.\n"
-                "- Understand the responsibilities of the position.\n"
-                "- Practise answering questions confidently.\n"
-                "- Prepare examples from your previous experience."
-            )
+        if start != -1 and end != -1 and end > start:
 
-        else:
+            try:
+                return json.loads(
+                    response_text[start:end + 1]
+                )
 
-            reply = (
-                "Here are some common interview questions to practise:\n\n"
-                "1. Tell us about yourself.\n"
-                "2. Why should we hire you?\n"
-                "3. What are your strengths and weaknesses?\n"
-                "4. What relevant experience do you have?\n"
-                "5. Where do you see yourself in five years?\n\n"
-                "Research the employer and position before your interview."
-            )
+            except json.JSONDecodeError:
+                return None
 
-    else:
-
-        reply = (
-            "This is a simulated CareerTrack AI response. "
-            f"You asked: {question}. "
-            "I can help you manage and improve your job applications."
-        )
-
-    return json.dumps({
-        "reply": reply,
-        "suggested_action": None
-    })
+    return None
 
 
 # ==========================================
@@ -176,55 +157,123 @@ def ask_claude(question, applications=None, history=None):
     if client is None:
         return {
             "reply": (
-                "Claude API key is missing. Please check your "
-                ".env file and ensure ANTHROPIC_API_KEY is configured."
+                "Claude API key is missing. "
+                "Please check your .env file."
             ),
             "suggested_action": None
         }
 
-    user_prompt = build_user_prompt(
-        question,
-        applications,
-        history
-    )
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ]
+        )
 
-    for attempt in range(2):
+        response_text = "\n".join(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
 
-        try:
+        # Remove possible Markdown code fences
+        response_text = re.sub(
+            r"^```(?:json)?\s*|\s*```$",
+            "",
+            response_text.strip(),
+            flags=re.IGNORECASE
+        )
 
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=2048,
-                system=SYSTEM_PROMPT,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": user_prompt
-                    }
-                ]
-            )
+        result = validate_response(response_text)
 
-            response_text = "\n".join(
-                block.text
-                for block in response.content
-                if block.type == "text"
-            )
+        if result is not None:
+            return result
 
-            response_text = re.sub(
-                r"^```(?:json)?\s*|\s*```$",
-                "",
-                response_text.strip(),
-                flags=re.IGNORECASE
-            )
+        print(f"Invalid response. Retry {attempt + 1}...")
 
-            result = validate_response(response_text)
+        # Retrieve relevant information from knowledge.txt
+        relevant_knowledge = retrieve_knowledge(question)
 
-            if result is not None:
-                return result
+        # Build the user's prompt, including application information
+        user_prompt = build_user_prompt(
+            question,
+            applications,
+            None
+        )
 
-            print(f"Invalid response. Retry {attempt + 1}...")
+        complete_prompt = f"""
+{user_prompt}
+# ==========================================
+# 5. CONNECT AI WITH MEMORY
+# ==========================================
 
-        except Exception as error:
+RELEVANT KNOWLEDGE RETRIEVED FROM CAREERTRACK AI:
+
+{relevant_knowledge}
+
+Use the retrieved knowledge when it is relevant.
+Use the conversation history to understand previous questions.
+Do not invent job applications or personal information.
+
+Return ONLY valid JSON in this exact format:
+
+{{
+    "reply": "Your helpful answer here",
+    "suggested_action": null
+}}
+"""
+
+        # Include previous conversation messages
+        messages = []
+
+        for message in history or []:
+
+            if message["role"] in ("user", "assistant"):
+
+                messages.append({
+                    "role": message["role"],
+                    "content": message["content"]
+                })
+
+        # Add the current question and retrieved knowledge
+        messages.append({
+            "role": "user",
+            "content": complete_prompt
+        })
+
+        # Send the request to the real Claude API
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1500,
+            system=SYSTEM_PROMPT,
+            messages=messages
+        )
+
+        # Extract Claude's text response
+        response_text = "".join(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
+
+        result = validate_response(response_text)
+
+        if result is not None:
+            return result
+
+        # Fallback if Claude returns text instead of JSON
+        return {
+            "reply": response_text,
+            "suggested_action": None
+        }
+
+    except Exception as error:
 
             print("Claude API error:", error)
 
@@ -418,23 +467,18 @@ def validate_summary(response):
         if not data["summary"].strip():
             return None
 
-        required_lists = [
-            "companies_discussed",
-            "positions_discussed",
-            "topics_discussed",
-            "key_advice",
-            "suggested_next_steps"
-        ]
+    required_lists = [
+        "topics_discussed",
+        "key_advice",
+        "suggested_next_steps"
+    ]
 
         for field in required_lists:
 
             if not isinstance(data.get(field), list):
                 return None
 
-            if not all(isinstance(item, str) for item in data[field]):
-                return None
-
-        return data
+    return data
 
     except (json.JSONDecodeError, TypeError):
         return None
@@ -456,46 +500,60 @@ def generate_session_summary(history):
 
         try:
 
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=2048,
-                system=SUMMARY_PROMPT,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": summary_prompt
-                    }
-                ]
-            )
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1500,
+            system=SUMMARY_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": complete_summary_prompt
+                }
+            ]
+        )
 
-            response_text = "\n".join(
-                block.text
-                for block in response.content
-                if block.type == "text"
-            )
+        response_text = "".join(
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=SUMMARY_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": summary_prompt
+                }
+            ]
+        )
 
-            response_text = re.sub(
-                r"^```(?:json)?\s*|\s*```$",
-                "",
-                response_text.strip(),
-                flags=re.IGNORECASE
-            )
+        response_text = "\n".join(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
+
+        # Remove possible Markdown code fences
+        response_text = re.sub(
+            r"^```(?:json)?\s*|\s*```$",
+            "",
+            response_text.strip(),
+            flags=re.IGNORECASE
+        )
 
             result = validate_summary(response_text)
 
             if result is not None:
                 return result
 
-            print(f"Invalid summary. Retry {attempt + 1}...")
+        print("Claude returned an invalid summary format.")
+        return None
 
         except Exception as error:
 
             print("Summary generation error:", error)
             return None
 
+
     return None
-
-
 # ==========================================
 # 10. SAVE COMPLETE SESSION
 # ==========================================
