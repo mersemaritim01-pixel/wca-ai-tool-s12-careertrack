@@ -6,7 +6,10 @@
         "location": "Nairobi",
         "application_date": "2026-11-20",
         "status": "Interview",
-        "notes": "Application submitted successfully."
+        "notes": "Application submitted successfully.",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "fc112dd5-6bb2-4ab1-99a4-cc7b3a5b9402",
@@ -15,7 +18,10 @@
         "location": "Nairobi",
         "application_date": "2026-11-20",
         "status": "Interview",
-        "notes": "Application submitted successfully."
+        "notes": "Application submitted successfully.",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "6322de72-bf60-486d-886a-625bd62ee456",
@@ -24,6 +30,33 @@
         "location": "nairobi",
         "application_date": "2026-11-20",
         "status": "Applied",
-        "notes": "when is the interview"
+        "notes": "when is the interview",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
+    },
+    {
+        "id": "0bff102a-db3e-4b7f-a540-03cec575d6f8",
+        "company": "ABC Technologies",
+        "job_title": "Junior Python Developer",
+        "location": "Nairobi",
+        "salary": "KES 50,000",
+        "application_date": "2026-11-26",
+        "interview_date": "2026-12-05",
+        "follow_up_date": "2026-12-08",
+        "status": "Applied",
+        "notes": "Fictional application for testing"
+    },
+    {
+        "id": "743007e2-ff51-4a3c-9724-d69d606782dd",
+        "company": "safaricom",
+        "job_title": "accountant",
+        "location": "nairobi",
+        "salary": "55000",
+        "application_date": "2026-11-26",
+        "interview_date": "",
+        "follow_up_date": "",
+        "status": "Applied",
+        "notes": ""
     }
 ]

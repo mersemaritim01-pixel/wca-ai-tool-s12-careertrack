@@ -1,8 +1,12 @@
 
 import json
+import os
 import re
 from pathlib import Path
 from datetime import datetime
+
+from dotenv import load_dotenv
+from anthropic import Anthropic
 
 from prompts import (
     SYSTEM_PROMPT,
@@ -12,10 +16,26 @@ from prompts import (
 )
 
 from memory import ConversationMemory
+from rag import retrieve_knowledge
 
 
 # ==========================================
-# 1. IDENTIFY COMPANY FROM CONVERSATION
+# 1. LOAD CLAUDE API KEY
+# ==========================================
+
+load_dotenv()
+
+API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+# Create the Claude client if the API key exists
+client = Anthropic(api_key=API_KEY) if API_KEY else None
+
+# Claude model
+CLAUDE_MODEL = "claude-sonnet-5-5"
+
+
+# ==========================================
+# 2. IDENTIFY COMPANY FROM CONVERSATION
 # ==========================================
 
 def identify_company(question, history=None):
@@ -30,14 +50,13 @@ def identify_company(question, history=None):
 
     messages.append(question)
 
-    # Search previous questions for company names
-    for message in reversed(messages):
+    pattern = (
+        r"\b(?:at|with|to)\s+"
+        r"([A-Za-z0-9][A-Za-z0-9&.'’ -]{0,60}?)"
+        r"(?=\s*[,.!?;]|\s+(?:for|as|and)\s+|$)"
+    )
 
-        pattern = (
-            r"\b(?:at|with|to)\s+"
-            r"([A-Za-z0-9][A-Za-z0-9&.'’ -]{0,60}?)"
-            r"(?=\s*[,.!?;]|\s+(?:for|as|and)\s+|$)"
-        )
+    for message in reversed(messages):
 
         matches = re.findall(
             pattern,
@@ -63,390 +82,298 @@ def identify_company(question, history=None):
 
 
 # ==========================================
-# 2. SIMULATE CLAUDE RESPONSE
+# 3. EXTRACT JSON FROM CLAUDE RESPONSE
 # ==========================================
 
-def simulate_claude_response(question, history=None):
+def extract_json(response_text):
 
-    history = history or []
+    if not isinstance(response_text, str):
+        return None
 
-    company = identify_company(question, history)
+    response_text = response_text.strip()
 
-    question_lower = question.lower()
+    # Remove Markdown code fences if Claude includes them
+    response_text = re.sub(
+        r"^```(?:json)?\s*|\s*```$",
+        "",
+        response_text,
+        flags=re.IGNORECASE
+    )
 
-    # Check whether the user wants to recall a company
-    company_recall_phrases = [
-        "which company did i mention",
-        "what company did i mention",
-        "which employer did i mention",
-        "what employer did i mention",
-        "which company am i interviewing",
-        "what company am i interviewing",
-        "which company is my interview with",
-        "who am i interviewing with"
-    ]
+    try:
+        return json.loads(response_text)
 
-    if any(
-        phrase in question_lower
-        for phrase in company_recall_phrases
-    ):
+    except json.JSONDecodeError:
 
-        if company:
-            reply = f"You previously mentioned {company}."
+        # Try to extract a JSON object from the response
+        start = response_text.find("{")
+        end = response_text.rfind("}")
 
-        else:
-            reply = (
-                "I could not find a company name "
-                "in our previous conversation."
-            )
+        if start != -1 and end != -1 and end > start:
 
-    # Check whether the user is asking about interviews
-    else:
-
-        interview_keywords = [
-            "interview",
-            "prepare for",
-            "interview questions",
-            "expect for this position",
-            "expect in the interview"
-        ]
-
-        if any(
-            word in question_lower
-            for word in interview_keywords
-        ):
-
-            if company:
-
-                reply = (
-                    f"Let's prepare you for your opportunity at "
-                    f"{company}.\n\n"
-                    "Here are some interview questions to practise:\n\n"
-                    "1. Tell us about yourself.\n"
-                    f"2. Why do you want to work at {company}?\n"
-                    "3. What relevant skills and experience do you have?\n"
-                    "4. What do you know about our company?\n"
-                    "5. How would you handle a challenging situation?\n"
-                    "6. What are your strengths and weaknesses?\n"
-                    "7. Where do you see yourself in five years?\n\n"
-                    "Preparation tips:\n"
-                    "- Research the company's products and services.\n"
-                    "- Understand the responsibilities of the position.\n"
-                    "- Practise answering questions confidently.\n"
-                    "- Prepare examples from your previous experience."
+            try:
+                return json.loads(
+                    response_text[start:end + 1]
                 )
 
-            else:
+            except json.JSONDecodeError:
+                return None
 
-                reply = (
-                    "Here are some common interview questions to practise:\n\n"
-                    "1. Tell us about yourself.\n"
-                    "2. Why should we hire you?\n"
-                    "3. What are your strengths and weaknesses?\n"
-                    "4. What relevant experience do you have?\n"
-                    "5. Where do you see yourself in five years?\n\n"
-                    "Research the employer and the position before your interview."
-                )
-
-        # General response
-        else:
-
-            reply = (
-                "This is a simulated CareerTrack AI response. "
-                f"You asked: {question}. "
-                "I can help you manage and improve your job applications."
-            )
-
-    response = {
-        "reply": reply,
-        "suggested_action": None
-    }
-
-    return json.dumps(response)
+    return None
 
 
 # ==========================================
-# 3. VALIDATE AI RESPONSE
+# 4. VALIDATE CLAUDE RESPONSE
 # ==========================================
 
 def validate_response(response):
 
-    try:
+    data = extract_json(response)
 
-        data = json.loads(response)
-
-        if not isinstance(data, dict):
-            return None
-
-        if not isinstance(data.get("reply"), str):
-            return None
-
-        if not data["reply"].strip():
-            return None
-
-        if "suggested_action" not in data:
-            return None
-
-        return data
-
-    except (json.JSONDecodeError, TypeError):
-
+    if not isinstance(data, dict):
         return None
+
+    if not isinstance(data.get("reply"), str):
+        return None
+
+    if not data["reply"].strip():
+        return None
+
+    if "suggested_action" not in data:
+        return None
+
+    return data
 
 
 # ==========================================
-# 4. ASK CLAUDE
+# 5. ASK CLAUDE USING REAL API AND RAG
 # ==========================================
 
 def ask_claude(question, applications=None, history=None):
 
-    user_prompt = build_user_prompt(
-        question,
-        applications,
-        history
-    )
+    if client is None:
 
-    for attempt in range(2):
+        return {
+            "reply": (
+                "Claude API key is missing. "
+                "Please check your .env file."
+            ),
+            "suggested_action": None
+        }
 
-        response = simulate_claude_response(
+    try:
+
+        # Retrieve relevant information from knowledge.txt
+        relevant_knowledge = retrieve_knowledge(question)
+
+        # Build the user's prompt, including application information
+        user_prompt = build_user_prompt(
             question,
-            history
+            applications,
+            None
         )
 
-        result = validate_response(response)
+        complete_prompt = f"""
+{user_prompt}
+
+RELEVANT KNOWLEDGE RETRIEVED FROM CAREERTRACK AI:
+
+{relevant_knowledge}
+
+Use the retrieved knowledge when it is relevant.
+Use the conversation history to understand previous questions.
+Do not invent job applications or personal information.
+
+Return ONLY valid JSON in this exact format:
+
+{{
+    "reply": "Your helpful answer here",
+    "suggested_action": null
+}}
+"""
+
+        # Include previous conversation messages
+        messages = []
+
+        for message in history or []:
+
+            if message["role"] in ("user", "assistant"):
+
+                messages.append({
+                    "role": message["role"],
+                    "content": message["content"]
+                })
+
+        # Add the current question and retrieved knowledge
+        messages.append({
+            "role": "user",
+            "content": complete_prompt
+        })
+
+        # Send the request to the real Claude API
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1500,
+            system=SYSTEM_PROMPT,
+            messages=messages
+        )
+
+        # Extract Claude's text response
+        response_text = "".join(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
+
+        result = validate_response(response_text)
 
         if result is not None:
             return result
 
-        print(f"Invalid response. Retry {attempt + 1}...")
+        # Fallback if Claude returns text instead of JSON
+        return {
+            "reply": response_text,
+            "suggested_action": None
+        }
 
-    return {
-        "reply": "Unable to generate a valid response.",
-        "suggested_action": None
-    }
+    except Exception as error:
+
+        print("Claude API error:", error)
+
+        return {
+            "reply": (
+                "Sorry, I could not connect to Claude. "
+                "Please check your API key, internet connection, "
+                "model access and available API credits."
+            ),
+            "suggested_action": None
+        }
 
 
 # ==========================================
-# 5. CONNECT AI WITH MEMORY
+# 6. CONNECT CLAUDE WITH CONVERSATION MEMORY
 # ==========================================
 
 def ask_with_memory(question, memory, applications=None):
 
+    # Retrieve previous conversation
     history = memory.get_history()
 
+    # Save the current user question
     memory.add_message("user", question)
 
+    # Send question, applications and history to Claude
     result = ask_claude(
         question,
         applications,
         history
     )
 
+    # Save Claude's response
     memory.add_message(
         "assistant",
         result["reply"]
     )
 
+    # Save conversation to JSON
     memory.save()
 
     return result
 
 
 # ==========================================
-# 6. SIMULATE FINAL AI SUMMARY
-# ==========================================
-
-def simulate_claude_summary(history):
-
-    user_questions = [
-        message["content"]
-        for message in history
-        if message["role"] == "user"
-    ]
-
-    companies = []
-    positions = []
-
-    for question in user_questions:
-
-        # Identify employers mentioned in conversation
-        company = identify_company(question, [])
-
-        if company and company.lower() not in [
-            item.lower() for item in companies
-        ]:
-            companies.append(company)
-
-        # Identify job positions mentioned by the user
-        match = re.search(
-            r"\b(?:applied|applying|apply)\s+for\s+"
-            r"(?:an?\s+)?(.+?)\s+(?:position|role|job)\b",
-            question,
-            re.IGNORECASE
-        )
-
-        if match:
-
-            position = match.group(1).strip()
-
-            if position.lower() not in [
-                item.lower() for item in positions
-            ]:
-                positions.append(position)
-
-    # Identify the main discussion topics
-    all_questions = " ".join(user_questions).lower()
-
-    topics = []
-
-    if "interview" in all_questions:
-        topics.append("Interview preparation")
-
-    if any(
-        word in all_questions
-        for word in ["application", "applied", "job"]
-    ):
-        topics.append("Job application management")
-
-    if any(
-        word in all_questions
-        for word in ["career", "experience", "skills"]
-    ):
-        topics.append("Career development")
-
-    if not topics:
-        topics = ["General career assistance"]
-
-    # Generate a relevant summary
-    summary_parts = []
-
-    if positions:
-        summary_parts.append(
-            "job positions including " + ", ".join(positions)
-        )
-
-    if companies:
-        summary_parts.append(
-            "employers including " + ", ".join(companies)
-        )
-
-    if summary_parts:
-
-        summary = (
-            "The user discussed "
-            + " and ".join(summary_parts)
-            + ". The main focus was "
-            + ", ".join(topics).lower()
-            + "."
-        )
-
-    else:
-
-        summary = (
-            "The user discussed career development and job application "
-            "management with CareerTrack AI."
-        )
-
-    # Provide useful key advice
-    key_advice = []
-
-    if "Interview preparation" in topics:
-
-        key_advice.extend([
-            "Prepare answers to common interview questions.",
-            "Research each employer before attending an interview.",
-            "Use examples from previous work experience to demonstrate skills."
-        ])
-
-    if "Job application management" in topics:
-
-        key_advice.extend([
-            "Keep application records updated.",
-            "Monitor application progress and follow up when appropriate."
-        ])
-
-    if not key_advice:
-
-        key_advice.append(
-            "Continue using CareerTrack AI to support career development."
-        )
-
-    # Suggested next steps
-    suggested_next_steps = [
-        "Continue monitoring job application progress.",
-        "Prepare for upcoming interviews.",
-        "Research employers and the requirements of each position."
-    ]
-
-    response = {
-        "summary": summary,
-        "companies_discussed": companies,
-        "positions_discussed": positions,
-        "topics_discussed": topics,
-        "key_advice": key_advice,
-        "suggested_next_steps": suggested_next_steps
-    }
-
-    return json.dumps(response, indent=4)
-
-
-# ==========================================
-# 7. VALIDATE SUMMARY RESPONSE
+# 7. VALIDATE SESSION SUMMARY
 # ==========================================
 
 def validate_summary(response):
 
-    try:
+    data = extract_json(response)
 
-        data = json.loads(response)
-
-        if not isinstance(data, dict):
-            return None
-
-        if not isinstance(data.get("summary"), str):
-            return None
-
-        if not data["summary"].strip():
-            return None
-
-        required_lists = [
-            "topics_discussed",
-            "key_advice",
-            "suggested_next_steps"
-        ]
-
-        for field in required_lists:
-
-            if not isinstance(data.get(field), list):
-                return None
-
-        return data
-
-    except (json.JSONDecodeError, TypeError):
-
+    if not isinstance(data, dict):
         return None
+
+    if not isinstance(data.get("summary"), str):
+        return None
+
+    if not data["summary"].strip():
+        return None
+
+    required_lists = [
+        "topics_discussed",
+        "key_advice",
+        "suggested_next_steps"
+    ]
+
+    for field in required_lists:
+
+        if not isinstance(data.get(field), list):
+            return None
+
+    return data
 
 
 # ==========================================
-# 8. GENERATE FINAL SESSION SUMMARY
+# 8. GENERATE REAL CLAUDE SESSION SUMMARY
 # ==========================================
 
 def generate_session_summary(history):
 
-    summary_prompt = build_summary_prompt(history)
+    if client is None:
 
-    for attempt in range(2):
+        print("Claude API key is missing.")
+        return None
 
-        response = simulate_claude_summary(history)
+    try:
 
-        result = validate_summary(response)
+        summary_prompt = build_summary_prompt(history)
+
+        complete_summary_prompt = f"""
+{summary_prompt}
+
+Return ONLY valid JSON using this structure:
+
+{{
+    "summary": "A short summary of the conversation",
+    "companies_discussed": [],
+    "positions_discussed": [],
+    "topics_discussed": [],
+    "key_advice": [],
+    "suggested_next_steps": []
+}}
+
+Do not invent information that was not discussed.
+"""
+
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1500,
+            system=SUMMARY_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": complete_summary_prompt
+                }
+            ]
+        )
+
+        response_text = "".join(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
+
+        result = validate_summary(response_text)
 
         if result is not None:
             return result
 
-        print(f"Invalid summary. Retry {attempt + 1}...")
+        print("Claude returned an invalid summary format.")
+        return None
 
-    return None
+    except Exception as error:
+
+        print("Summary API error:", error)
+        return None
 
 
 # ==========================================
