@@ -24,7 +24,10 @@
         "location": "nairobi",
         "application_date": "2026-11-20",
         "status": "Applied",
-        "notes": "when is the interview"
+        "notes": "when is the interview",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "04dda926-ef57-4274-aad5-f647005e922d",
@@ -33,16 +36,22 @@
         "location": "ruiru",
         "application_date": "2026-11-21",
         "status": "Applied",
-        "notes": "need an IRA liense"
+        "notes": "need an IRA liense",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "c54e8c71-4201-4fb7-9b56-71015ea06079",
-        "company": "sharon cherono",
-        "job_title": "kcb bank",
-        "location": "nairobi",
+        "company": "kcb bank",
+        "job_title": "Business banker",
+        "location": "ruiru",
         "application_date": "2026-11-21",
         "status": "Applied",
-        "notes": "ready to start working"
+        "notes": "ready to start working",
+        "salary": "115,000",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "d572273c-17ed-4495-9d86-c74a32b42138",
@@ -51,7 +60,10 @@
         "location": "nairobi",
         "application_date": "2026-11-22",
         "status": "Applied",
-        "notes": "share interview dates"
+        "notes": "share interview dates",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "db3cd381-bf99-4b65-ad7f-c8a0901407aa",
@@ -60,7 +72,10 @@
         "location": "Nairobi",
         "application_date": "2026-11-23",
         "status": "Interview",
-        "notes": "Application submitted successfully."
+        "notes": "Application submitted successfully.",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
     },
     {
         "id": "9b91cef7-716b-456a-8db6-b6a484408a08",
@@ -68,6 +83,21 @@
         "job_title": "Customer Service Officer",
         "location": "Nairobi",
         "application_date": "2026-11-23",
+        "status": "Interview",
+        "notes": "Application submitted successfully.",
+        "salary": "",
+        "interview_date": "",
+        "follow_up_date": ""
+    },
+    {
+        "id": "6c0a3092-ceed-44a8-9519-8fb92b57ebe9",
+        "company": "NCBA Bank",
+        "job_title": "Customer Service Officer",
+        "location": "Nairobi",
+        "salary": "",
+        "application_date": "2026-11-26",
+        "interview_date": "",
+        "follow_up_date": "",
         "status": "Interview",
         "notes": "Application submitted successfully."
     }

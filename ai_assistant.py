@@ -1,6 +1,7 @@
 
 import json
 import re
+import os
 from pathlib import Path
 from datetime import datetime
 
@@ -14,15 +15,23 @@ from prompts import (
 from memory import ConversationMemory
 from anthropic import Anthropic
 from dotenv import load_dotenv
-# Load environment variables
-load_dotenv()
-
-# Connect to Claude API
-client = Anthropic()
 
 
 # ==========================================
-# 1. IDENTIFY COMPANY FROM CONVERSATION
+# 1. LOAD ENVIRONMENT VARIABLES
+# ==========================================
+
+load_dotenv()
+
+API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+client = Anthropic(api_key=API_KEY) if API_KEY else None
+
+MODEL = "claude-sonnet-4-6"
+
+
+# ==========================================
+# 2. IDENTIFY COMPANY FROM CONVERSATION
 # ==========================================
 
 def identify_company(question, history=None):
@@ -37,14 +46,18 @@ def identify_company(question, history=None):
 
     messages.append(question)
 
-    # Search previous questions for company names
     for message in reversed(messages):
 
-        pattern = r"\b(?:at|with|to)\s+([A-Za-z0-9][A-Za-z0-9&.'’ -]{0,60}?)(?=\s*[,.!?;]|\s+(?:for|as|and)\s+|$)"
+        pattern = (
+            r"\b(?:at|with|to)\s+"
+            r"([A-Za-z0-9][A-Za-z0-9&.'’ -]{0,60}?)"
+            r"(?=\s*[,.!?;]|\s+(?:for|as|and)\s+|$)"
+        )
 
         matches = re.findall(pattern, message, re.IGNORECASE)
 
         if matches:
+
             company = matches[-1].strip()
 
             ignored = [
@@ -61,7 +74,7 @@ def identify_company(question, history=None):
 
 
 # ==========================================
-# 2. SIMULATE CLAUDE RESPONSE
+# 3. SIMULATE CLAUDE RESPONSE
 # ==========================================
 
 def simulate_claude_response(question, history=None):
@@ -72,7 +85,6 @@ def simulate_claude_response(question, history=None):
 
     question_lower = question.lower()
 
-    # Check whether the user is asking about interviews
     interview_keywords = [
         "interview",
         "prepare for",
@@ -112,7 +124,7 @@ def simulate_claude_response(question, history=None):
                 "3. What are your strengths and weaknesses?\n"
                 "4. What relevant experience do you have?\n"
                 "5. Where do you see yourself in five years?\n\n"
-                "Research the employer and the position before your interview."
+                "Research the employer and position before your interview."
             )
 
     else:
@@ -123,21 +135,20 @@ def simulate_claude_response(question, history=None):
             "I can help you manage and improve your job applications."
         )
 
-    response = {
+    return json.dumps({
         "reply": reply,
         "suggested_action": None
-    }
-
-    return json.dumps(response)
+    })
 
 
 # ==========================================
-# 3. VALIDATE AI RESPONSE
+# 4. VALIDATE AI RESPONSE
 # ==========================================
 
 def validate_response(response):
 
     try:
+
         data = json.loads(response)
 
         if not isinstance(data, dict):
@@ -155,15 +166,25 @@ def validate_response(response):
         return data
 
     except (json.JSONDecodeError, TypeError):
+
         return None
 
 
 # ==========================================
-# 4. ASK CLAUDE
+# 5. ASK CLAUDE
 # ==========================================
 
-
 def ask_claude(question, applications=None, history=None):
+
+    if client is None:
+
+        return {
+            "reply": (
+                "Claude API key is missing. Please check your "
+                ".env file and ensure ANTHROPIC_API_KEY is configured."
+            ),
+            "suggested_action": None
+        }
 
     user_prompt = build_user_prompt(
         question,
@@ -173,46 +194,61 @@ def ask_claude(question, applications=None, history=None):
 
     for attempt in range(2):
 
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=2048,
-            system=SYSTEM_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": user_prompt
-                }
-            ]
-        )
+        try:
 
-        response_text = "\n".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
+            response = client.messages.create(
+                model=MODEL,
+                max_tokens=2048,
+                system=SYSTEM_PROMPT,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": user_prompt
+                    }
+                ]
+            )
 
-        # Remove possible Markdown code fences
-        response_text = re.sub(
-            r"^```(?:json)?\s*|\s*```$",
-            "",
-            response_text.strip(),
-            flags=re.IGNORECASE
-        )
+            response_text = "\n".join(
+                block.text
+                for block in response.content
+                if block.type == "text"
+            )
 
-        result = validate_response(response_text)
+            response_text = re.sub(
+                r"^```(?:json)?\s*|\s*```$",
+                "",
+                response_text.strip(),
+                flags=re.IGNORECASE
+            )
 
-        if result is not None:
-            return result
+            result = validate_response(response_text)
 
-        print(f"Invalid response. Retry {attempt + 1}...")
+            if result is not None:
+                return result
+
+            print(f"Invalid response. Retry {attempt + 1}...")
+
+        except Exception as error:
+
+            print("Claude API error:", error)
+
+            return {
+                "reply": (
+                    "Unable to connect to Claude AI. "
+                    "Please check your internet connection, "
+                    "API key and API account."
+                ),
+                "suggested_action": None
+            }
 
     return {
         "reply": "Unable to generate a valid response.",
         "suggested_action": None
     }
 
+
 # ==========================================
-# 5. CONNECT AI WITH MEMORY
+# 6. CONNECT AI WITH MEMORY
 # ==========================================
 
 def ask_with_memory(question, memory, applications=None):
@@ -235,11 +271,11 @@ def ask_with_memory(question, memory, applications=None):
 
 
 # ==========================================
-# 6. SIMULATE FINAL AI SUMMARY
+# 7. SIMULATE FINAL AI SUMMARY
 # ==========================================
 
-
 def simulate_claude_summary(history):
+
     user_questions = [
         message["content"]
         for message in history
@@ -250,6 +286,7 @@ def simulate_claude_summary(history):
     positions = []
 
     for question in user_questions:
+
         # Identify employers mentioned in the conversation
         company = identify_company(question, [])
 
@@ -260,12 +297,15 @@ def simulate_claude_summary(history):
 
         # Identify job positions mentioned by the user
         match = re.search(
-            r"\b(?:applied|applying|apply)\s+for\s+(?:an?\s+)?(.+?)\s+(?:position|role|job)\b",
+            r"\b(?:applied|applying|apply)\s+for\s+"
+            r"(?:an?\s+)?(.+?)\s+"
+            r"(?:position|role|job)\b",
             question,
             re.IGNORECASE
         )
 
         if match:
+
             position = match.group(1).strip()
 
             if position.lower() not in [
@@ -275,15 +315,22 @@ def simulate_claude_summary(history):
 
     # Identify the main discussion topics
     all_questions = " ".join(user_questions).lower()
+
     topics = []
 
     if "interview" in all_questions:
         topics.append("Interview preparation")
 
-    if any(word in all_questions for word in ["application", "applied", "job"]):
+    if any(
+        word in all_questions
+        for word in ["application", "applied", "job"]
+    ):
         topics.append("Job application management")
 
-    if any(word in all_questions for word in ["career", "experience", "skills"]):
+    if any(
+        word in all_questions
+        for word in ["career", "experience", "skills"]
+    ):
         topics.append("Career development")
 
     if not topics:
@@ -293,22 +340,29 @@ def simulate_claude_summary(history):
     summary_parts = []
 
     if positions:
+
         summary_parts.append(
             "job positions including " + ", ".join(positions)
         )
 
     if companies:
+
         summary_parts.append(
             "employers including " + ", ".join(companies)
         )
 
     if summary_parts:
+
         summary = (
-            "The user discussed " + " and ".join(summary_parts)
+            "The user discussed "
+            + " and ".join(summary_parts)
             + ". The main focus was "
-            + ", ".join(topics).lower() + "."
+            + ", ".join(topics).lower()
+            + "."
         )
+
     else:
+
         summary = (
             "The user discussed career development and job application "
             "management with CareerTrack AI."
@@ -318,6 +372,7 @@ def simulate_claude_summary(history):
     key_advice = []
 
     if "Interview preparation" in topics:
+
         key_advice.extend([
             "Prepare answers to common interview questions.",
             "Research each employer before attending an interview.",
@@ -325,12 +380,14 @@ def simulate_claude_summary(history):
         ])
 
     if "Job application management" in topics:
+
         key_advice.extend([
             "Keep application records updated.",
             "Monitor application progress and follow up when appropriate."
         ])
 
     if not key_advice:
+
         key_advice.append(
             "Continue using CareerTrack AI to support career development."
         )
@@ -339,7 +396,7 @@ def simulate_claude_summary(history):
     suggested_next_steps = [
         "Continue monitoring job application progress.",
         "Prepare for upcoming interviews.",
-        "Research employers and the requirements of each position."
+        "Research employers and position requirements."
     ]
 
     response = {
@@ -353,13 +410,15 @@ def simulate_claude_summary(history):
 
     return json.dumps(response, indent=4)
 
+
 # ==========================================
-# 7. VALIDATE SUMMARY RESPONSE
+# 8. VALIDATE SUMMARY RESPONSE
 # ==========================================
 
 def validate_summary(response):
 
     try:
+
         data = json.loads(response)
 
         if not isinstance(data, dict):
@@ -372,6 +431,8 @@ def validate_summary(response):
             return None
 
         required_lists = [
+            "companies_discussed",
+            "positions_discussed",
             "topics_discussed",
             "key_advice",
             "suggested_next_steps"
@@ -382,58 +443,78 @@ def validate_summary(response):
             if not isinstance(data.get(field), list):
                 return None
 
+            if not all(
+                isinstance(item, str)
+                for item in data[field]
+            ):
+                return None
+
         return data
 
     except (json.JSONDecodeError, TypeError):
+
         return None
 
 
 # ==========================================
-# 8. GENERATE FINAL SESSION SUMMARY
+# 9. GENERATE FINAL SESSION SUMMARY
 # ==========================================
 
 def generate_session_summary(history):
+
+    if client is None:
+
+        print("Claude API key is missing.")
+        return None
 
     summary_prompt = build_summary_prompt(history)
 
     for attempt in range(2):
 
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=2048,
-            system=SUMMARY_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": summary_prompt
-                }
-            ]
-        )
+        try:
 
-        response_text = "\n".join(
-            block.text
-            for block in response.content
-            if block.type == "text"
-        )
+            response = client.messages.create(
+                model=MODEL,
+                max_tokens=2048,
+                system=SUMMARY_PROMPT,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": summary_prompt
+                    }
+                ]
+            )
 
-        # Remove possible Markdown code fences
-        response_text = re.sub(
-            r"^```(?:json)?\s*|\s*```$",
-            "",
-            response_text.strip(),
-            flags=re.IGNORECASE
-        )
+            response_text = "\n".join(
+                block.text
+                for block in response.content
+                if block.type == "text"
+            )
 
-        result = validate_summary(response_text)
+            response_text = re.sub(
+                r"^```(?:json)?\s*|\s*```$",
+                "",
+                response_text.strip(),
+                flags=re.IGNORECASE
+            )
 
-        if result is not None:
-            return result
+            result = validate_summary(response_text)
 
-        print(f"Invalid summary. Retry {attempt + 1}...")
+            if result is not None:
+                return result
+
+            print(f"Invalid summary. Retry {attempt + 1}...")
+
+        except Exception as error:
+
+            print("Summary generation error:", error)
+            return None
 
     return None
+
+
 # ==========================================
-# 9. SAVE COMPLETE SESSION
+# 10. SAVE COMPLETE SESSION
 # ==========================================
 
 def finalize_session(memory):
@@ -441,6 +522,7 @@ def finalize_session(memory):
     history = memory.get_history()
 
     if not history:
+
         print("No conversation available to summarize.")
         return None
 
@@ -449,15 +531,19 @@ def finalize_session(memory):
     summary = generate_session_summary(history)
 
     if summary is None:
+
         print("Unable to generate a valid summary.")
         return None
 
     # Create sessions folder
     session_folder = Path(__file__).resolve().parent / "sessions"
+
     session_folder.mkdir(exist_ok=True)
 
     # Generate dated filename
-    current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    current_date = datetime.now().strftime(
+        "%Y-%m-%d_%H-%M-%S"
+    )
 
     filename = (
         f"session_{current_date}_{memory.session_id}.json"
@@ -465,7 +551,6 @@ def finalize_session(memory):
 
     file_path = session_folder / filename
 
-    # Save conversation and summary together
     session_data = {
         "session_id": memory.session_id,
         "date": current_date,
@@ -474,9 +559,16 @@ def finalize_session(memory):
     }
 
     with open(file_path, "w", encoding="utf-8") as file:
-        json.dump(session_data, file, indent=4)
+
+        json.dump(
+            session_data,
+            file,
+            indent=4,
+            ensure_ascii=False
+        )
 
     print("\nSESSION SUMMARY")
+
     print(json.dumps(summary, indent=4))
 
     print("\nSession saved successfully!")
@@ -486,7 +578,7 @@ def finalize_session(memory):
 
 
 # ==========================================
-# 10. MAIN PROGRAM
+# 11. MAIN PROGRAM
 # ==========================================
 
 if __name__ == "__main__":

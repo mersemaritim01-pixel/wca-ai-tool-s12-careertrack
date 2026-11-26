@@ -1,45 +1,4 @@
-def display_menu():
-    print("\n" + "=" * 40)
-    print("       JOB APPLICATION TRACKER")
-    print("=" * 40)
 
-    print("1. Start a new conversation")
-    print("2. View saved conversations")
-    print("3. View job applications")
-    print("4. View conversation summary")
-    print("5. Exit")
-
-    print("=" * 40)
-
-
-def main():
-    while True:
-        display_menu()
-
-        choice = input("Choose an option (1-5): ")
-
-        if choice == "1":
-            print("\nStarting a new conversation...")
-
-        elif choice == "2":
-            print("\nSaved conversations will appear here.")
-
-        elif choice == "3":
-            print("\nYour job applications will appear here.")
-
-        elif choice == "4":
-            print("\nYour conversation summary will appear here.")
-
-        elif choice == "5":
-            print("\nThank you for using Job Application Tracker!")
-            break
-
-        else:
-            print("\nInvalid choice. Please try again.")
-
-
-if __name__ == "__main__":
-    main()
 from job_tracker import JobTracker
 from summary import display_summary
 from memory import ConversationMemory
@@ -292,13 +251,14 @@ def start_new_session(tracker):
     while True:
         display_menu()
 
-        choice = input("Enter your choice (1-8): ")
+        choice = input("Enter your choice (1-8): ").strip()
 
         if choice == "1":
             add_application(tracker)
 
         elif choice == "2":
             view_applications(tracker)
+            input("\nPress Enter to return to the menu...")
 
         elif choice == "3":
             update_application(tracker)
@@ -311,6 +271,7 @@ def start_new_session(tracker):
 
         elif choice == "6":
             display_summary(tracker.view_applications())
+            input("\nPress Enter to return to the menu...")
 
         elif choice == "7":
             ask_ai(memory, tracker)
@@ -325,24 +286,22 @@ def start_new_session(tracker):
             print("Invalid choice. Please select 1-8.")
 
 
-
 def main():
-
     tracker = JobTracker()
 
     print("\nWelcome to CareerTrack AI!")
 
     while True:
-
         display_session_menu()
 
-        choice = input("Enter your choice (1-3): ")
+        choice = input("Enter your choice (1-3): ").strip()
 
         if choice == "1":
             start_new_session(tracker)
 
         elif choice == "2":
             open_previous_session()
+            input("\nPress Enter to return to the menu...")
 
         elif choice == "3":
             print("\nThank you for using CareerTrack AI!")
