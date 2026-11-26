@@ -283,10 +283,22 @@ Future development will focus on expanding CareerTrack AI into a more comprehens
 Developed collaboratively for **WECAN Season 12**.
 
 1. Mercy Chepkurui
-2. David David Muhuha Maina
+2. David Muhuha Maina
 3. Florence Muthoni Wanjiru
 
-## 14. Project Information
+## 14.Team Responsibilities
+
+Member 1: Core application and Claude AI integration .
+
+Member 2: Job tracking and conversation memory.
+
+Member 3: Session management, testing, and documentation.
+
+Expected Outcome
+
+To provide an efficient, intelligent, and centralized platform for managing job applications and improving the job search experience.
+
+## 15. Project Information
 
 | Item | Details |
 |---|---|
