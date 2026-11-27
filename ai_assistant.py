@@ -1,12 +1,8 @@
-
 import json
-import os
 import re
+import os
 from pathlib import Path
 from datetime import datetime
-
-from dotenv import load_dotenv
-from anthropic import Anthropic
 
 from prompts import (
     SYSTEM_PROMPT,
@@ -16,7 +12,8 @@ from prompts import (
 )
 
 from memory import ConversationMemory
-from rag import retrieve_knowledge
+from anthropic import Anthropic
+from dotenv import load_dotenv
 
 
 # ==========================================
@@ -33,7 +30,7 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 
 
 # ==========================================
-# 2. IDENTIFY COMPANY FROM CONVERSATION
+# 2. IDENTIFY COMPANY
 # ==========================================
 
 def identify_company(question, history=None):
@@ -43,24 +40,20 @@ def identify_company(question, history=None):
     messages = [
         message["content"]
         for message in history
-        if message["role"] == "user"
+        if message.get("role") == "user"
     ]
 
     messages.append(question)
 
-    pattern = (
-        r"\b(?:at|with|to)\s+"
-        r"([A-Za-z0-9][A-Za-z0-9&.'’ -]{0,60}?)"
-        r"(?=\s*[,.!?;]|\s+(?:for|as|and)\s+|$)"
-    )
-
     for message in reversed(messages):
 
-        matches = re.findall(
-            pattern,
-            message,
-            re.IGNORECASE
+        pattern = (
+            r"\b(?:at|with|to)\s+"
+            r"([A-Za-z0-9][A-Za-z0-9&.'’ -]{0,60}?)"
+            r"(?=\s*[,.!?;]|\s+(?:for|as|and)\s+|$)"
         )
+
+        matches = re.findall(pattern, message, re.IGNORECASE)
 
         if matches:
 
@@ -80,7 +73,7 @@ def identify_company(question, history=None):
 
 
 # ==========================================
-# 3. EXTRACT JSON FROM CLAUDE RESPONSE
+# 3. EXTRACT JSON RESPONSE
 # ==========================================
 
 def extract_json(response_text):
@@ -90,7 +83,6 @@ def extract_json(response_text):
 
     response_text = response_text.strip()
 
-    # Remove Markdown code fences
     response_text = re.sub(
         r"^```(?:json)?\s*|\s*```$",
         "",
@@ -103,11 +95,10 @@ def extract_json(response_text):
 
     except json.JSONDecodeError:
 
-        # Attempt to extract a JSON object
         start = response_text.find("{")
         end = response_text.rfind("}")
 
-        if start != -1 and end != -1 and end > start:
+        if start != -1 and end > start:
 
             try:
                 return json.loads(
@@ -121,7 +112,7 @@ def extract_json(response_text):
 
 
 # ==========================================
-# 4. VALIDATE CLAUDE RESPONSE
+# 4. VALIDATE AI RESPONSE
 # ==========================================
 
 def validate_response(response):
@@ -144,7 +135,7 @@ def validate_response(response):
 
 
 # ==========================================
-# 5. ASK CLAUDE USING REAL API AND RAG
+# 5. ASK CLAUDE
 # ==========================================
 
 def ask_claude(question, applications=None, history=None):
@@ -154,72 +145,42 @@ def ask_claude(question, applications=None, history=None):
         return {
             "reply": (
                 "Claude API key is missing. "
-                "Please check your .env file and ensure "
-                "ANTHROPIC_API_KEY is configured."
+                "Please check your .env file."
             ),
             "suggested_action": None
         }
 
     history = history or []
 
-    try:
+    # Build the current user's prompt
+    user_prompt = build_user_prompt(
+        question,
+        applications,
+        None
+    )
 
-        # Retrieve relevant information from knowledge base
+    # Prepare previous conversation messages
+    messages = []
+
+    for message in history:
+
+        if message.get("role") in ("user", "assistant"):
+
+            messages.append({
+                "role": message["role"],
+                "content": message["content"]
+            })
+
+    # Add the current question
+    messages.append({
+        "role": "user",
+        "content": user_prompt
+    })
+
+    # Retry if Claude returns an invalid response
+    for attempt in range(2):
+
         try:
-            relevant_knowledge = retrieve_knowledge(question)
-
-        except Exception as rag_error:
-
-            print("Knowledge retrieval error:", rag_error)
-            relevant_knowledge = ""
-
-        # Build the user's prompt with application information
-        user_prompt = build_user_prompt(
-            question,
-            applications,
-            None
-        )
-
-        # Combine the prompt with retrieved knowledge
-        complete_prompt = f"""
-{user_prompt}
-
-RELEVANT KNOWLEDGE RETRIEVED FROM CAREERTRACK AI:
-
-{relevant_knowledge}
-
-Use the retrieved knowledge when it is relevant.
-Use conversation history to understand previous questions.
-Do not invent job applications or personal information.
-
-Return ONLY valid JSON in this exact format:
-
-{{
-    "reply": "Your helpful answer here",
-    "suggested_action": null
-}}
-"""
-
-        # Include previous conversation messages
-        messages = []
-
-        for message in history:
-
-            if message["role"] in ("user", "assistant"):
-
-                messages.append({
-                    "role": message["role"],
-                    "content": message["content"]
-                })
-
-        # Add the current question
-        messages.append({
-            "role": "user",
-            "content": complete_prompt
-        })
-
-        # Retry invalid responses
-        for attempt in range(2):
 
             response = client.messages.create(
                 model=CLAUDE_MODEL,
@@ -228,7 +189,6 @@ Return ONLY valid JSON in this exact format:
                 messages=messages
             )
 
-            # Extract Claude's text response
             response_text = "\n".join(
                 block.text
                 for block in response.content
@@ -245,61 +205,188 @@ Return ONLY valid JSON in this exact format:
                 f"Retry {attempt + 1}..."
             )
 
-        return {
-            "reply": (
-                "Unable to generate a valid response. "
-                "Please try asking your question again."
-            ),
-            "suggested_action": None
-        }
+        except Exception as error:
 
-    except Exception as error:
+            print("Claude API error:", error)
 
-        print("Claude API error:", error)
+            if attempt == 1:
 
-        return {
-            "reply": (
-                "Sorry, I could not connect to Claude. "
-                "Please check your API key, internet connection, "
-                "model access and available API credits."
-            ),
-            "suggested_action": None
-        }
+                return {
+                    "reply": (
+                        "Unable to connect to Claude AI. "
+                        "Please check your internet connection, "
+                        "API key and API account."
+                    ),
+                    "suggested_action": None
+                }
+
+    return {
+        "reply": "Unable to generate a valid response.",
+        "suggested_action": None
+    }
 
 
 # ==========================================
-# 6. CONNECT CLAUDE WITH CONVERSATION MEMORY
+# 6. CONNECT AI WITH MEMORY
 # ==========================================
 
 def ask_with_memory(question, memory, applications=None):
 
-    # Retrieve previous conversation
     history = memory.get_history()
 
-    # Save the current user question
     memory.add_message("user", question)
 
-    # Send question, applications and history to Claude
     result = ask_claude(
         question,
         applications,
         history
     )
 
-    # Save Claude's response
     memory.add_message(
         "assistant",
         result["reply"]
     )
 
-    # Save conversation to JSON
     memory.save()
 
     return result
 
 
 # ==========================================
-# 7. VALIDATE SESSION SUMMARY
+# 7. SIMULATE FINAL AI SUMMARY
+# ==========================================
+
+def simulate_claude_summary(history):
+
+    user_questions = [
+        message["content"]
+        for message in history
+        if message.get("role") == "user"
+    ]
+
+    companies = []
+    positions = []
+
+    for question in user_questions:
+
+        company = identify_company(question, [])
+
+        if company and company.lower() not in [
+            item.lower() for item in companies
+        ]:
+            companies.append(company)
+
+        match = re.search(
+            r"\b(?:applied|applying|apply)\s+for\s+"
+            r"(?:an?\s+)?(.+?)\s+"
+            r"(?:position|role|job)\b",
+            question,
+            re.IGNORECASE
+        )
+
+        if match:
+
+            position = match.group(1).strip()
+
+            if position.lower() not in [
+                item.lower() for item in positions
+            ]:
+                positions.append(position)
+
+    all_questions = " ".join(user_questions).lower()
+
+    topics = []
+
+    if "interview" in all_questions:
+        topics.append("Interview preparation")
+
+    if any(
+        word in all_questions
+        for word in ["application", "applied", "job"]
+    ):
+        topics.append("Job application management")
+
+    if any(
+        word in all_questions
+        for word in ["career", "experience", "skills"]
+    ):
+        topics.append("Career development")
+
+    if not topics:
+        topics = ["General career assistance"]
+
+    summary_parts = []
+
+    if positions:
+        summary_parts.append(
+            "job positions including " + ", ".join(positions)
+        )
+
+    if companies:
+        summary_parts.append(
+            "employers including " + ", ".join(companies)
+        )
+
+    if summary_parts:
+
+        summary = (
+            "The user discussed "
+            + " and ".join(summary_parts)
+            + ". The main focus was "
+            + ", ".join(topics).lower()
+            + "."
+        )
+
+    else:
+
+        summary = (
+            "The user discussed career development and job "
+            "application management with CareerTrack AI."
+        )
+
+    key_advice = []
+
+    if "Interview preparation" in topics:
+
+        key_advice.extend([
+            "Prepare answers to common interview questions.",
+            "Research each employer before attending an interview.",
+            "Use examples from previous work experience to demonstrate skills."
+        ])
+
+    if "Job application management" in topics:
+
+        key_advice.extend([
+            "Keep application records updated.",
+            "Monitor application progress and follow up when appropriate."
+        ])
+
+    if not key_advice:
+
+        key_advice.append(
+            "Continue using CareerTrack AI to support career development."
+        )
+
+    suggested_next_steps = [
+        "Continue monitoring job application progress.",
+        "Prepare for upcoming interviews.",
+        "Research employers and position requirements."
+    ]
+
+    response = {
+        "summary": summary,
+        "companies_discussed": companies,
+        "positions_discussed": positions,
+        "topics_discussed": topics,
+        "key_advice": key_advice,
+        "suggested_next_steps": suggested_next_steps
+    }
+
+    return json.dumps(response, indent=4)
+
+
+# ==========================================
+# 8. VALIDATE SUMMARY RESPONSE
 # ==========================================
 
 def validate_summary(response):
@@ -316,8 +403,6 @@ def validate_summary(response):
         return None
 
     required_lists = [
-        "companies_discussed",
-        "positions_discussed",
         "topics_discussed",
         "key_advice",
         "suggested_next_steps"
@@ -328,17 +413,11 @@ def validate_summary(response):
         if not isinstance(data.get(field), list):
             return None
 
-        if not all(
-            isinstance(item, str)
-            for item in data[field]
-        ):
-            return None
-
     return data
 
 
 # ==========================================
-# 8. GENERATE REAL CLAUDE SESSION SUMMARY
+# 9. GENERATE FINAL SESSION SUMMARY
 # ==========================================
 
 def generate_session_summary(history):
@@ -348,37 +427,20 @@ def generate_session_summary(history):
         print("Claude API key is missing.")
         return None
 
-    try:
+    summary_prompt = build_summary_prompt(history)
 
-        summary_prompt = build_summary_prompt(history)
+    for attempt in range(2):
 
-        complete_summary_prompt = f"""
-{summary_prompt}
-
-Return ONLY valid JSON using this structure:
-
-{{
-    "summary": "A short summary of the conversation",
-    "companies_discussed": [],
-    "positions_discussed": [],
-    "topics_discussed": [],
-    "key_advice": [],
-    "suggested_next_steps": []
-}}
-
-Do not invent information that was not discussed.
-"""
-
-        for attempt in range(2):
+        try:
 
             response = client.messages.create(
                 model=CLAUDE_MODEL,
-                max_tokens=2048,
+                max_tokens=1500,
                 system=SUMMARY_PROMPT,
                 messages=[
                     {
                         "role": "user",
-                        "content": complete_summary_prompt
+                        "content": summary_prompt
                     }
                 ]
             )
@@ -399,17 +461,15 @@ Do not invent information that was not discussed.
                 f"Retry {attempt + 1}..."
             )
 
-        print("Claude returned an invalid summary format.")
-        return None
+        except Exception as error:
 
-    except Exception as error:
+            print("Summary generation error:", error)
 
-        print("Summary API error:", error)
-        return None
+    return None
 
 
 # ==========================================
-# 9. SAVE COMPLETE SESSION
+# 10. SAVE COMPLETE SESSION
 # ==========================================
 
 def finalize_session(memory):
@@ -430,14 +490,12 @@ def finalize_session(memory):
         print("Unable to generate a valid summary.")
         return None
 
-    # Create sessions folder
     session_folder = (
         Path(__file__).resolve().parent / "sessions"
     )
 
     session_folder.mkdir(exist_ok=True)
 
-    # Generate dated filename
     current_date = datetime.now().strftime(
         "%Y-%m-%d_%H-%M-%S"
     )
@@ -466,9 +524,7 @@ def finalize_session(memory):
 
     print("\nSESSION SUMMARY")
 
-    print(
-        json.dumps(summary, indent=4)
-    )
+    print(json.dumps(summary, indent=4))
 
     print("\nSession saved successfully!")
     print("File:", file_path)
@@ -477,7 +533,7 @@ def finalize_session(memory):
 
 
 # ==========================================
-# 10. MAIN PROGRAM
+# 11. MAIN PROGRAM
 # ==========================================
 
 if __name__ == "__main__":
@@ -507,10 +563,7 @@ if __name__ == "__main__":
             print("Please enter a question.")
             continue
 
-        result = ask_with_memory(
-            question,
-            memory
-        )
+        result = ask_with_memory(question, memory)
 
         print("\nCareerTrack AI:")
         print(result["reply"])
