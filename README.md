@@ -142,7 +142,8 @@ pip install -r requirements.txt
 
 ### Step 4: Configure the Anthropic API
 
-Create a `.env` file in the project root directory and add your API key:
+ANTHROPIC_API_KEY=your_api_key_here
+```
 
 ```env
 Our API key is stored in .env
